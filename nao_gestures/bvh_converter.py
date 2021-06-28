@@ -60,10 +60,12 @@ class NaoBvhConverter:
             "RShoulderPitch": -bvh_rotations["RightArm_Xrotation"] + 90.0,
             "RElbowYaw": -(bvh_rotations["RightForeArm_Zrotation"] + bvh_rotations["RightArm_Yrotation"]) + 90.0,
             "RElbowRoll": bvh_rotations["RightForeArm_Yrotation"],
+            "RWristYaw": bvh_rotations["RightForeArm_Xrotation"],
             "LShoulderRoll": bvh_rotations["LeftArm_Zrotation"] + 90.0,
             "LShoulderPitch": -bvh_rotations["LeftArm_Xrotation"] + 90.0,
             "LElbowYaw": -(bvh_rotations["LeftForeArm_Zrotation"] + bvh_rotations["LeftArm_Yrotation"]) - 90.0,
             "LElbowRoll": bvh_rotations["LeftForeArm_Yrotation"],
+            "LWristYaw": bvh_rotations["LeftForeArm_Xrotation"],
         }
 
     @staticmethod
