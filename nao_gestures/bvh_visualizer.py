@@ -188,6 +188,22 @@ def angle_between(a, b, reference_direction):
         raise ValueError()
 
 
+def arccos_safe(arg):
+    if np.isclose(arg, 1):
+        arg = 1
+    if np.isclose(arg, -1):
+        arg = -1
+    return np.arccos(arg)
+
+
+def arcsin_safe(arg):
+    if np.isclose(arg, 1):
+        arg = 1
+    if np.isclose(arg, -1):
+        arg = -1
+    return np.arcsin(arg)
+
+
 class InverseKinematics:
     def __init__(self):
         raise NotImplementedError()
@@ -199,41 +215,55 @@ class InverseKinematics:
             position_right_elbow_inertial):
 
         # Convert right elbow position to right arm standard frame, relative to that frame's origin
-        position_right_elbow = rotation_right_shoulder_standard.inv().apply(position_right_elbow_inertial - position_right_shoulder_standard)
+        p_elbow_hat = make_unit(rotation_right_shoulder_standard.inv().apply(position_right_elbow_inertial - position_right_shoulder_standard))
 
-        # Define some quantities for convenience:
-        # The elbow position in the y direction
-        position_right_elbow_perp = np.dot([0, 1, 0], position_right_elbow) * np.array([0, 1, 0])
-        # The elbow position in the xz plane
-        position_right_elbow_parallel = position_right_elbow - position_right_elbow_perp
+        # The following is an analytical inversion of the forward kinematics:
+        # p_elbow = R_y (-theta_p) R_z (theta_r) [-1 0 0]^T
 
-        # Solve inverse kinematics for shoulders:
-        theta_right_shoulder_pitch = angle_between(
-            np.array([-1, 0, 0]),
-            position_right_elbow_parallel,
-            np.array([0, -1, 0]),
-        )
-        theta_right_shoulder_pitch = (
-            normalize_angle(theta_right_shoulder_pitch),
-            normalize_angle(theta_right_shoulder_pitch + np.pi),  # another candidate in other direction
-        )
-        position_right_elbow_after_pitch = (
-            Rotation.from_rotvec(theta_right_shoulder_pitch[0] * np.array([0, -1, 0])).apply(np.array([-1, 0, 0])),
-            Rotation.from_rotvec(theta_right_shoulder_pitch[1] * np.array([0, -1, 0])).apply(np.array([-1, 0, 0]))
-        )
-        theta_right_shoulder_roll = (
-            angle_between(position_right_elbow, position_right_elbow_after_pitch[0], np.array([0, 0, -1])),
-            angle_between(position_right_elbow, position_right_elbow_after_pitch[1], np.array([0, 0, -1])),
-        )
+        # There are two candidate rolls:
+        theta_r = [
+            normalize_angle(arcsin_safe(-p_elbow_hat[1])),
+            normalize_angle(np.pi - arcsin_safe(-p_elbow_hat[1])),
+        ]
 
-        # Choose a solution with -pi < roll < 0:
-        idx_admitted = [idx for idx, roll in enumerate(theta_right_shoulder_roll) if roll <= 0]
-        if len(idx_admitted) == 0:
-            raise ValueError("Failed to find a solution for inverse kinematics")
+        # There will be two candidates and we'll discard the one in the backward direction (most consistent with Nao's kinematics)
+        theta_r = [angle for angle in theta_r if angle > -np.pi/2 and angle < np.pi/2]
+        if len(theta_r) != 1:
+            raise ValueError("Expected exactly one candidate theta_r")
+        theta_r = theta_r[0]
+
+        # Sanity check:
+        if not np.isclose(np.sin(theta_r), -p_elbow_hat[1]):
+            raise RuntimeError("Something broke")
+
+        # In the case theta_r = -pi/2 => cos(theta_r) = 0, we have gimbal lock (and any pitch is admissible)
+        if np.isclose(np.abs(theta_r), np.pi/2):
+            return {
+                'RShoulderRoll': theta_r,
+                'RShoulderPitch': 0,
+            }
+
+        theta_p0 = [
+            arccos_safe(-p_elbow_hat[0] / np.cos(theta_r)),
+            -arccos_safe(-p_elbow_hat[0] / np.cos(theta_r)),
+        ]
+        theta_p1 = [
+            arcsin_safe(-p_elbow_hat[2] / np.cos(theta_r)),
+            np.pi - arcsin_safe(-p_elbow_hat[2] / np.cos(theta_r)),
+        ]
+        theta_p0 = [normalize_angle(angle) for angle in theta_p0]
+        theta_p1 = [normalize_angle(angle) for angle in theta_p1]
+        equivalence_matrix = [np.isclose(a, b) for a in theta_p0 for b in theta_p1]
+        if equivalence_matrix[0] or equivalence_matrix[1]:
+            theta_p = theta_p0[0]
+        elif equivalence_matrix[2] or equivalence_matrix[3]:
+            theta_p = theta_p0[1]
+        else:
+            raise ValueError("Failed to find a pitch")
 
         return {
-            'RShoulderRoll': theta_right_shoulder_roll[idx_admitted[0]],
-            'RShoulderPitch': theta_right_shoulder_pitch[idx_admitted[0]],
+            'RShoulderRoll': theta_r,
+            'RShoulderPitch': theta_p,
         }
 
     @staticmethod
@@ -263,9 +293,9 @@ class ForwardKinematics:
             right_arm_length):
 
         rotation_right_elbow_standard = (
-            rotation_right_shoulder_standard *
             Rotation.from_rotvec(theta_right_shoulder_pitch * np.array([0, -1, 0])) *
-            Rotation.from_rotvec(theta_right_shoulder_roll * np.array([0, 0, 1]))
+            Rotation.from_rotvec(theta_right_shoulder_roll * np.array([0, 0, 1])) *
+            rotation_right_shoulder_standard
         )
         position_right_elbow_standard = \
             rotation_right_elbow_standard.apply(right_arm_length * np.array([-1, 0, 0])) + position_right_shoulder_standard
