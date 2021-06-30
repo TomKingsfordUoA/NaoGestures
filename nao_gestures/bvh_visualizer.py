@@ -1,3 +1,5 @@
+import copy
+
 import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D  # noqa
@@ -74,16 +76,83 @@ def get_bvh_frames(bvh_file):
     return all_frames
 
 
+def add_standard_frames(bvh_frames):
+    """
+    The goal here is to create some shoulder-attached frames which reference anatomical landmarks. The BVH frames are
+    arbitrary and make it difficult to perform inverse kinematics and solve for Nao robot joint rotations. With
+    anatomically-referenced frames, this becomes easier.
+    """
+
+    # Grab the references:
+    position_right_arm, rotation_right_arm = bvh_frames['RightArm']
+    position_left_arm, rotation_left_arm = bvh_frames['LeftArm']
+    position_hips, rotation_hips = bvh_frames['Hips']
+
+    # Calculate the normal to the shoulder/hip plane
+    # The normal vector is orthogonal to the vector between the shoulders and the vector from a shoulder to the hips
+    # this is a system of linear equations expressing this. The last row adds an arbitrary constraint that the sum of
+    # the components is one so the system is full rank and uniquely solvable.
+    A = np.array([
+        position_left_arm - position_right_arm,
+        position_left_arm - position_hips,
+        [np.random.random(), np.random.random(), np.random.random()]]
+    )
+    b = np.array([[0], [0], [1]])
+    n = np.linalg.solve(A, b)
+    n_hat = n / np.linalg.norm(n)  # make it a unit vector
+    n_hat = n_hat.reshape([-1])
+    # Make it point in the forward direction for the robot
+    if n_hat[1] < 0:
+        n_hat *= -1
+    # TODO(TK): sanity check that n_hat is orthogonal to the two vectors
+
+    # We wish to take the right arm frame and rotate it such that the y axis is parallel with n_hat
+    y_r = rotation_right_arm.apply([0, 1, 0])
+    theta_r = np.arccos(np.dot(y_r, n_hat))  # noting that each vector is of unit length already
+    rot_vec_r = np.cross(y_r, n_hat)  # this is a unit vector orthogonal to y_r and n_hat, oriented by the right hand rule
+    rotation_right_arm_standard = Rotation.from_rotvec(theta_r * rot_vec_r) * rotation_right_arm
+
+    # We wish to take the right arm standard frame and rotate it about its y axis such that the z axis is parallel with
+    # the vector between the left and right arm
+    z_r_standard = rotation_right_arm_standard.apply([0, 0, 1])
+    theta_r = -np.arccos(np.dot((position_right_arm - position_left_arm)/np.linalg.norm(position_right_arm - position_left_arm), z_r_standard))
+    y_r_standard = rotation_right_arm_standard.apply([0, 1, 0])
+    rotation_right_arm_standard = Rotation.from_rotvec(theta_r * y_r_standard) * rotation_right_arm_standard
+
+    # We wish to take the left arm frame and rotate it such that the y axis is parallel with n_hat, in the opposite direction
+    y_l = rotation_left_arm.apply([0, 1, 0])
+    theta_l = -np.arccos(np.dot(y_l, -n_hat))  # noting that each vector is of unit length already
+    rot_vec_l = np.cross(y_l, n_hat)  # this is a unit vector orthogonal to y_l and n_hat, oriented by the right hand rule
+    rotation_left_arm_standard = Rotation.from_rotvec(theta_l * rot_vec_l) * rotation_left_arm
+
+    # We wish to take the left arm standard frame and rotate it about its y axis such that the z axis is parallel with
+    # the vector between the left and right arm
+    z_l_standard = rotation_left_arm_standard.apply([0, 0, 1])
+    theta_l = np.arccos(np.dot((position_left_arm - position_right_arm) / np.linalg.norm(position_left_arm - position_right_arm), z_l_standard))
+    y_l_standard = rotation_left_arm_standard.apply([0, 1, 0])
+    rotation_left_arm_standard = Rotation.from_rotvec(theta_l * y_l_standard) * rotation_left_arm_standard
+
+    # Copy:
+    bvh_frames_plus_standard = copy.deepcopy(bvh_frames)
+    bvh_frames_plus_standard['RightArmStandard'] = (position_right_arm, rotation_right_arm_standard)
+    bvh_frames_plus_standard['LeftArmStandard'] = (position_left_arm, rotation_left_arm_standard)
+
+    return bvh_frames_plus_standard
+
+
 def main():
     all_frames = get_bvh_frames('nao_gestures/demos/examples/rand_5.bvh')
+    all_frames = [add_standard_frames(frames) for frames in all_frames]
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     drawable_frames = [
         'Hips',
-        'LeftShoulder',
-        'RightShoulder',
-        'LeftArm',
-        'RightArm',
+        # 'LeftShoulder',
+        # 'RightShoulder',
+        # 'LeftArm',
+        # 'RightArm',
+        'LeftArmStandard',
+        'RightArmStandard',
         'LeftForeArm',
         'RightForeArm',
         'LeftHand',
