@@ -156,8 +156,36 @@ def make_unit(vector):
         return vector / n
 
 
-def angle_between(a, b):
-    return np.arccos(np.dot(make_unit(a), make_unit(b)))
+def normalize_angle(angle_radians):
+    while angle_radians > np.pi:
+        angle_radians -= 2 * np.pi
+    while angle_radians <= -np.pi:
+        angle_radians += 2 * np.pi
+    return angle_radians
+
+
+def angle_between(a, b, reference_direction):
+    a_hat = make_unit(a)
+    b_hat = make_unit(b)
+
+    theta = normalize_angle(np.arccos(np.dot(a_hat, b_hat)))
+
+    # If theta is 0 or pi, we have colinear vectors and needn't consider the reference direction:
+    if np.isclose(theta, 0) or np.isclose(theta, np.pi):
+        return theta
+
+    # Find a rotation vector which is in the reference direction:
+    c = make_unit(np.cross(a_hat, b_hat))
+    if np.arccos(np.dot(c, reference_direction)) > np.pi / 2:
+        c *= -1
+    rot = Rotation.from_rotvec(c * theta)
+
+    if np.allclose(rot.apply(a_hat), b_hat):
+        return theta
+    elif np.allclose(rot.inv().apply(a_hat), b_hat):
+        return -theta
+    else:
+        raise ValueError()
 
 
 class InverseKinematics:
@@ -180,13 +208,32 @@ class InverseKinematics:
         position_right_elbow_parallel = position_right_elbow - position_right_elbow_perp
 
         # Solve inverse kinematics for shoulders:
-        theta_right_shoulder_pitch = angle_between(np.array([-1, 0, 0]), position_right_elbow_parallel)
-        position_right_elbow_after_pitch = Rotation.from_rotvec(theta_right_shoulder_pitch * np.array([0, -1, 0])).apply(np.array([-1, 0, 0]))
-        theta_right_shoulder_roll = -angle_between(position_right_elbow, position_right_elbow_after_pitch)
+        theta_right_shoulder_pitch = angle_between(
+            np.array([-1, 0, 0]),
+            position_right_elbow_parallel,
+            np.array([0, -1, 0]),
+        )
+        theta_right_shoulder_pitch = (
+            normalize_angle(theta_right_shoulder_pitch),
+            normalize_angle(theta_right_shoulder_pitch + np.pi),  # another candidate in other direction
+        )
+        position_right_elbow_after_pitch = (
+            Rotation.from_rotvec(theta_right_shoulder_pitch[0] * np.array([0, -1, 0])).apply(np.array([-1, 0, 0])),
+            Rotation.from_rotvec(theta_right_shoulder_pitch[1] * np.array([0, -1, 0])).apply(np.array([-1, 0, 0]))
+        )
+        theta_right_shoulder_roll = (
+            angle_between(position_right_elbow, position_right_elbow_after_pitch[0], np.array([0, 0, -1])),
+            angle_between(position_right_elbow, position_right_elbow_after_pitch[1], np.array([0, 0, -1])),
+        )
+
+        # Choose a solution with -pi < roll < 0:
+        idx_admitted = [idx for idx, roll in enumerate(theta_right_shoulder_roll) if roll <= 0]
+        if len(idx_admitted) == 0:
+            raise ValueError("Failed to find a solution for inverse kinematics")
 
         return {
-            'RShoulderRoll': theta_right_shoulder_roll,
-            'RShoulderPitch': theta_right_shoulder_pitch,
+            'RShoulderRoll': theta_right_shoulder_roll[idx_admitted[0]],
+            'RShoulderPitch': theta_right_shoulder_pitch[idx_admitted[0]],
         }
 
     @staticmethod

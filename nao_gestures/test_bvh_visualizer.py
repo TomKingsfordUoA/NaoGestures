@@ -112,7 +112,7 @@ def test_inverse_kinematics_right_shoulder_shoulder_roll_and_pitch():
 
 
 def test_forward_then_inverse_kinematics_random_pitch():
-    np.random.seed(42)
+    np.random.seed(43)
     theta_right_shoulder_pitch = np.random.random() * 2 * np.pi - np.pi
     theta_right_shoulder_roll = 0
 
