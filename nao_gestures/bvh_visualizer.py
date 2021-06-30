@@ -1,11 +1,15 @@
 import copy
+import sys
+import time
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from mpl_toolkits.mplot3d import Axes3D  # noqa
 from numpy import pi
 from scipy.spatial.transform import Rotation
 
+from nao_gestures import NaoGesturePlayer
 from pymo.parsers import BVHParser
 
 
@@ -35,6 +39,10 @@ def get_bvh_frames(bvh_file):
     parser = BVHParser()
     mocap_data = parser.parse(bvh_file)
     skeleton = mocap_data.skeleton
+
+    # Get index:
+    index = mocap_data.values['Hips_Xrotation'].index
+    # TODO(TK): check to ensure all indices are the same
 
     all_frames = []
     n_frames = mocap_data.values['Hips_Xrotation'].size
@@ -73,7 +81,7 @@ def get_bvh_frames(bvh_file):
 
         all_frames.append(frames)
 
-    return all_frames
+    return all_frames, index
 
 
 def add_standard_frames(bvh_frames):
@@ -110,14 +118,14 @@ def add_standard_frames(bvh_frames):
     y_r = rotation_right_arm.apply([0, 1, 0])
     theta_r = np.arccos(np.dot(y_r, n_hat))  # noting that each vector is of unit length already
     rot_vec_r = np.cross(y_r, n_hat)  # this is a unit vector orthogonal to y_r and n_hat, oriented by the right hand rule
-    rotation_right_arm_standard = Rotation.from_rotvec(theta_r * rot_vec_r) * rotation_right_arm
+    rotation_right_shoulder_standard = Rotation.from_rotvec(theta_r * rot_vec_r) * rotation_right_arm
 
     # We wish to take the right arm standard frame and rotate it about its y axis such that the z axis is parallel with
     # the vector between the left and right arm
-    z_r_standard = rotation_right_arm_standard.apply([0, 0, 1])
+    z_r_standard = rotation_right_shoulder_standard.apply([0, 0, 1])
     theta_r = -np.arccos(np.dot((position_right_arm - position_left_arm)/np.linalg.norm(position_right_arm - position_left_arm), z_r_standard))
-    y_r_standard = rotation_right_arm_standard.apply([0, 1, 0])
-    rotation_right_arm_standard = Rotation.from_rotvec(theta_r * y_r_standard) * rotation_right_arm_standard
+    y_r_standard = rotation_right_shoulder_standard.apply([0, 1, 0])
+    rotation_right_shoulder_standard = Rotation.from_rotvec(theta_r * y_r_standard) * rotation_right_shoulder_standard
 
     # We wish to take the left arm frame and rotate it such that the y axis is parallel with n_hat, in the opposite direction
     y_l = rotation_left_arm.apply([0, 1, 0])
@@ -134,41 +142,140 @@ def add_standard_frames(bvh_frames):
 
     # Copy:
     bvh_frames_plus_standard = copy.deepcopy(bvh_frames)
-    bvh_frames_plus_standard['RightArmStandard'] = (position_right_arm, rotation_right_arm_standard)
+    bvh_frames_plus_standard['RightArmStandard'] = (position_right_arm, rotation_right_shoulder_standard)
     bvh_frames_plus_standard['LeftArmStandard'] = (position_left_arm, rotation_left_arm_standard)
 
     return bvh_frames_plus_standard
 
 
+def make_unit(vector):
+    n = np.linalg.norm(vector)
+    if np.isclose(n, 0.0):
+        return vector
+    else:
+        return vector / n
+
+
+def angle_between(a, b):
+    return np.arccos(np.dot(make_unit(a), make_unit(b)))
+
+
+class InverseKinematics:
+    def __init__(self):
+        raise NotImplementedError()
+
+    @staticmethod
+    def inverse_kinematics_right_shoulder(
+            position_right_shoulder_standard,
+            rotation_right_shoulder_standard,
+            position_right_elbow_inertial):
+
+        # Convert right elbow position to right arm standard frame, relative to that frame's origin
+        position_right_elbow = rotation_right_shoulder_standard.inv().apply(position_right_elbow_inertial - position_right_shoulder_standard)
+
+        # Define some quantities for convenience:
+        # The elbow position in the y direction
+        position_right_elbow_perp = np.dot([0, 1, 0], position_right_elbow) * np.array([0, 1, 0])
+        # The elbow position in the xz plane
+        position_right_elbow_parallel = position_right_elbow - position_right_elbow_perp
+
+        # Solve inverse kinematics for shoulders:
+        theta_right_shoulder_pitch = angle_between(np.array([-1, 0, 0]), position_right_elbow_parallel)
+        position_right_elbow_after_pitch = Rotation.from_rotvec(theta_right_shoulder_pitch * np.array([0, -1, 0])).apply(np.array([-1, 0, 0]))
+        theta_right_shoulder_roll = -angle_between(position_right_elbow, position_right_elbow_after_pitch)
+
+        return {
+            'RShoulderRoll': theta_right_shoulder_roll,
+            'RShoulderPitch': theta_right_shoulder_pitch,
+        }
+
+    @staticmethod
+    def inverse_kinematics(bvh_frames_plus_standard):
+        position_right_shoulder_standard, rotation_right_shoulder_standard = bvh_frames_plus_standard['RightArmStandard']
+        position_right_elbow_inertial, rotation_right_elbow_inertial = bvh_frames_plus_standard['RightForeArm']
+
+        ik = dict()
+        ik.update(InverseKinematics.inverse_kinematics_right_shoulder(
+            position_right_shoulder_standard=position_right_shoulder_standard,
+            rotation_right_shoulder_standard=rotation_right_shoulder_standard,
+            position_right_elbow_inertial=position_right_elbow_inertial,
+        ))
+        return ik
+
+
+class ForwardKinematics:
+    def __init__(self):
+        raise NotImplementedError()
+
+    @staticmethod
+    def forward_kinematics_right_elbow(
+            theta_right_shoulder_pitch,
+            theta_right_shoulder_roll,
+            position_right_shoulder_standard,
+            rotation_right_shoulder_standard,
+            right_arm_length):
+
+        rotation_right_elbow_standard = (
+            rotation_right_shoulder_standard *
+            Rotation.from_rotvec(theta_right_shoulder_pitch * np.array([0, -1, 0])) *
+            Rotation.from_rotvec(theta_right_shoulder_roll * np.array([0, 0, 1]))
+        )
+        position_right_elbow_standard = \
+            rotation_right_elbow_standard.apply(right_arm_length * np.array([-1, 0, 0])) + position_right_shoulder_standard
+
+        return position_right_elbow_standard, rotation_right_elbow_standard
+
+    @staticmethod
+    def forward_kinematics(ik, bvh_frames_plus_standard):
+        right_arm_length = np.linalg.norm(bvh_frames_plus_standard['RightArm'][0] - bvh_frames_plus_standard['RightForeArm'][0])
+
+        position_right_shoulder_standard, rotation_right_shoulder_standard = bvh_frames_plus_standard['RightArmStandard']
+
+        theta_right_shoulder_pitch = ik['RShoulderPitch']
+        theta_right_shoulder_roll = ik['RShoulderRoll']
+
+        position_right_elbow_standard, rotation_right_elbow_standard = ForwardKinematics.forward_kinematics_right_elbow(
+            theta_right_shoulder_pitch,
+            theta_right_shoulder_roll,
+            position_right_shoulder_standard,
+            rotation_right_shoulder_standard,
+            right_arm_length)
+
+        return [
+            ('FKRightElbow', position_right_elbow_standard, rotation_right_elbow_standard),
+        ]
+
+
 def main():
-    all_frames = get_bvh_frames('nao_gestures/demos/examples/rand_5.bvh')
+    all_frames, index = get_bvh_frames('nao_gestures/demos/examples/rand_5.bvh')
     all_frames = [add_standard_frames(frames) for frames in all_frames]
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     drawable_frames = [
-        'Hips',
+        # 'Hips',
         # 'LeftShoulder',
         # 'RightShoulder',
         # 'LeftArm',
         # 'RightArm',
         'LeftArmStandard',
         'RightArmStandard',
-        'LeftForeArm',
+        # 'LeftForeArm',
         'RightForeArm',
-        'LeftHand',
+        # 'LeftHand',
         'RightHand',
-        'LeftUpLeg',
-        'RightUpLeg',
-        'LeftLeg',
-        'RightLeg',
-        'LeftFoot',
-        'RightFoot',
-        'Spine',
-        'Spine1',
-        'Spine2',
-        'Spine3',
+        # 'LeftUpLeg',
+        # 'RightUpLeg',
+        # 'LeftLeg',
+        # 'RightLeg',
+        # 'LeftFoot',
+        # 'RightFoot',
+        # 'Spine',
+        # 'Spine1',
+        # 'Spine2',
+        # 'Spine3',
         'Head',
     ]
+    ik = []
     for idx, frames in enumerate(all_frames):
         ax.cla()
         ax.set_xlabel('x')
@@ -180,10 +287,27 @@ def main():
         ax.set_ylim([-reference_dim / 2, reference_dim / 2])  # noqa
         ax.set_zlim([0, reference_dim])  # noqa
 
+        ik.append(InverseKinematics.inverse_kinematics(frames))
+        # ik.append(inverse_kinematics(frames))
+        # print(ik[-1]['RElbowRoll'] * 180 / pi, ik[-1]['RElbowYaw'] * 180 / pi)
+
+        for frame_name, position, rotation in ForwardKinematics.forward_kinematics(ik[-1], frames):
+            draw_frame(ax, frame_name, position, rotation, arrow_length=10)
+
         for frame_name, (position, rotation) in frames.items():
             if len(drawable_frames) == 0 or frame_name in drawable_frames:
                 draw_frame(ax, frame_name, position, rotation, arrow_length=10)
         plt.pause(0.05)
+
+    # Play on Nao:
+    player = NaoGesturePlayer(
+        robot_ip="127.0.0.1",
+        robot_port=9559,
+        my_ip="127.0.0.1",
+        my_port=1234,
+    )
+    df_gestures = pd.DataFrame(data=ik, index=index)
+    # player.play(df_gestures, speed=1.0)
 
 
 if __name__ == '__main__':
