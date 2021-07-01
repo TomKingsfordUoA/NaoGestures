@@ -349,7 +349,7 @@ class InverseKinematics:
         ]
 
         # There will be two candidates and we'll discard the one in the backward direction (most consistent with Nao's kinematics)
-        theta_r = [angle for angle in theta_r if angle > 0]
+        theta_r = [angle for angle in theta_r if angle >= 0]
         if len(theta_r) != 1:
             raise ValueError("Expected exactly one candidate theta_r")
         theta_r = theta_r[0]
@@ -363,8 +363,8 @@ class InverseKinematics:
             np.pi - arcsin_safe(-p_hat[0] / np.sin(theta_r)),
         ]
         theta_y1 = [
-            arccos_safe(p_hat[2] / np.sin(theta_r)),
-            -arccos_safe(p_hat[2] / np.sin(theta_r)),
+            arccos_safe(-p_hat[2] / np.sin(theta_r)),
+            -arccos_safe(-p_hat[2] / np.sin(theta_r)),
         ]
         equivalence_matrix = [isclose_angles(a, b) for a in theta_y0 for b in theta_y1]
         if equivalence_matrix[0] or equivalence_matrix[1]:
@@ -372,7 +372,7 @@ class InverseKinematics:
         elif equivalence_matrix[2] or equivalence_matrix[3]:
             theta_y = theta_y0[1]
         else:
-            raise ValueError("Failed to find a pitch")
+            raise ValueError("Failed to find a yaw")
 
         return theta_r, theta_y
 
@@ -462,6 +462,7 @@ class ForwardKinematics:
         return position_left_elbow_standard, rotation_left_elbow_standard
 
     @staticmethod
+    # TODO(TK): rename the forward kinematics so they reference the joint they're operating on, not the end effector
     def forward_kinematics_right_hand(
             theta_right_elbow_roll,
             theta_right_elbow_yaw,
