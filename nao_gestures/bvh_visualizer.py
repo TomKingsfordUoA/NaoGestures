@@ -1,6 +1,4 @@
 import copy
-import sys
-import time
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -204,6 +202,16 @@ def arcsin_safe(arg):
     return np.arcsin(arg)
 
 
+def isclose_angles(a, b, rtol=1.e-3, atol=1.e-6):
+    if np.isclose(a, b, rtol=rtol, atol=atol):
+        return True
+    if np.isclose(2 * np.pi + a, b, rtol=rtol, atol=atol):
+        return True
+    if np.isclose(-2 * np.pi + a, b, rtol=rtol, atol=atol):
+        return True
+    return False
+
+
 class InverseKinematics:
     def __init__(self):
         raise NotImplementedError()
@@ -253,7 +261,7 @@ class InverseKinematics:
         ]
         theta_p0 = [normalize_angle(angle) for angle in theta_p0]
         theta_p1 = [normalize_angle(angle) for angle in theta_p1]
-        equivalence_matrix = [np.isclose(a, b) for a in theta_p0 for b in theta_p1]
+        equivalence_matrix = [isclose_angles(a, b) for a in theta_p0 for b in theta_p1]
         if equivalence_matrix[0] or equivalence_matrix[1]:
             theta_p = theta_p0[0]
         elif equivalence_matrix[2] or equivalence_matrix[3]:
@@ -293,9 +301,9 @@ class ForwardKinematics:
             right_arm_length):
 
         rotation_right_elbow_standard = (
+            rotation_right_shoulder_standard *
             Rotation.from_rotvec(theta_right_shoulder_pitch * np.array([0, -1, 0])) *
-            Rotation.from_rotvec(theta_right_shoulder_roll * np.array([0, 0, 1])) *
-            rotation_right_shoulder_standard
+            Rotation.from_rotvec(theta_right_shoulder_roll * np.array([0, 0, 1]))
         )
         position_right_elbow_standard = \
             rotation_right_elbow_standard.apply(right_arm_length * np.array([-1, 0, 0])) + position_right_shoulder_standard
@@ -333,7 +341,7 @@ def main():
         # 'LeftShoulder',
         # 'RightShoulder',
         # 'LeftArm',
-        # 'RightArm',
+        'RightArm',
         'LeftArmStandard',
         'RightArmStandard',
         # 'LeftForeArm',
