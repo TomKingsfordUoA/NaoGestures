@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 from scipy.spatial.transform import Rotation
 
 from nao_gestures.bvh_visualizer import ForwardKinematics, InverseKinematics
@@ -278,3 +279,8 @@ def test_inverse_then_forward_kinematics_random():
 
         # Give a relatively large tolerance as small errors in IK can add to relatively large differences here
         assert np.allclose(position_right_elbow_standard, position_right_elbow_standard_initial, atol=0.01)
+
+
+@pytest.mark.xfail
+def test_left_shoulder():
+    raise NotImplementedError()
