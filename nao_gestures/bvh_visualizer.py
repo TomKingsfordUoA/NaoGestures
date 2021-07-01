@@ -230,8 +230,8 @@ class InverseKinematics:
 
         # There are two candidate rolls:
         theta_r = [
-            normalize_angle(arcsin_safe(-p_elbow_hat[1])),
-            normalize_angle(np.pi - arcsin_safe(-p_elbow_hat[1])),
+            normalize_angle(arcsin_safe(-p_elbow_hat[2])),
+            normalize_angle(np.pi - arcsin_safe(-p_elbow_hat[2])),
         ]
 
         # There will be two candidates and we'll discard the one in the backward direction (most consistent with Nao's kinematics)
@@ -241,7 +241,7 @@ class InverseKinematics:
         theta_r = theta_r[0]
 
         # Sanity check:
-        if not np.isclose(np.sin(theta_r), -p_elbow_hat[1]):
+        if not np.isclose(np.sin(theta_r), -p_elbow_hat[2]):
             raise RuntimeError("Something broke")
 
         # In the case theta_r = -pi/2 => cos(theta_r) = 0, we have gimbal lock (and any pitch is admissible)
@@ -252,12 +252,12 @@ class InverseKinematics:
             }
 
         theta_p0 = [
-            arccos_safe(-p_elbow_hat[0] / np.cos(theta_r)),
-            -arccos_safe(-p_elbow_hat[0] / np.cos(theta_r)),
+            arccos_safe(-p_elbow_hat[1] / np.cos(theta_r)),
+            -arccos_safe(-p_elbow_hat[1] / np.cos(theta_r)),
         ]
         theta_p1 = [
-            arcsin_safe(-p_elbow_hat[2] / np.cos(theta_r)),
-            np.pi - arcsin_safe(-p_elbow_hat[2] / np.cos(theta_r)),
+            arcsin_safe(-p_elbow_hat[0] / np.cos(theta_r)),
+            np.pi - arcsin_safe(-p_elbow_hat[0] / np.cos(theta_r)),
         ]
         theta_p0 = [normalize_angle(angle) for angle in theta_p0]
         theta_p1 = [normalize_angle(angle) for angle in theta_p1]
@@ -302,11 +302,11 @@ class ForwardKinematics:
 
         rotation_right_elbow_standard = (
             rotation_right_shoulder_standard *
-            Rotation.from_rotvec(theta_right_shoulder_pitch * np.array([0, -1, 0])) *
-            Rotation.from_rotvec(theta_right_shoulder_roll * np.array([0, 0, 1]))
+            Rotation.from_rotvec(theta_right_shoulder_pitch * np.array([0, 0, -1])) *
+            Rotation.from_rotvec(theta_right_shoulder_roll * np.array([1, 0, 0]))
         )
         position_right_elbow_standard = \
-            rotation_right_elbow_standard.apply(right_arm_length * np.array([-1, 0, 0])) + position_right_shoulder_standard
+            rotation_right_elbow_standard.apply(right_arm_length * np.array([0, -1, 0])) + position_right_shoulder_standard
 
         return position_right_elbow_standard, rotation_right_elbow_standard
 
@@ -337,16 +337,16 @@ def main():
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     drawable_frames = [
-        # 'Hips',
+        'Hips',
         # 'LeftShoulder',
         # 'RightShoulder',
         # 'LeftArm',
-        'RightArm',
+        # 'RightArm',
         'LeftArmStandard',
         'RightArmStandard',
-        # 'LeftForeArm',
+        'LeftForeArm',
         'RightForeArm',
-        # 'LeftHand',
+        'LeftHand',
         'RightHand',
         # 'LeftUpLeg',
         # 'RightUpLeg',
@@ -354,10 +354,10 @@ def main():
         # 'RightLeg',
         # 'LeftFoot',
         # 'RightFoot',
-        # 'Spine',
-        # 'Spine1',
-        # 'Spine2',
-        # 'Spine3',
+        'Spine',
+        'Spine1',
+        'Spine2',
+        'Spine3',
         'Head',
     ]
     ik = []

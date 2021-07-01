@@ -20,7 +20,7 @@ def test_forward_kinematics_right_elbow_zero():
             right_arm_length=1.0,
         )
 
-    position_right_elbow_standard_expected = rotation_right_shoulder_standard.apply(np.array([-1, 0, 0])) + position_right_shoulder_standard
+    position_right_elbow_standard_expected = rotation_right_shoulder_standard.apply(np.array([0, -1, 0])) + position_right_shoulder_standard
 
     assert np.allclose(position_right_elbow_standard, position_right_elbow_standard_expected)
     assert np.allclose(rotation_right_elbow_standard.as_rotvec(),
@@ -43,11 +43,11 @@ def test_forward_kinematics_right_elbow_shoulder_roll_only():
             right_arm_length=1.0,
         )
 
-    position_right_elbow_standard_expected = rotation_right_shoulder_standard.apply(np.array([0, 1, 0])) + position_right_shoulder_standard
+    position_right_elbow_standard_expected = rotation_right_shoulder_standard.apply(np.array([0, 0, 1])) + position_right_shoulder_standard
 
     assert np.allclose(position_right_elbow_standard, position_right_elbow_standard_expected)
     assert np.allclose(rotation_right_elbow_standard.as_rotvec(),
-                       (rotation_right_shoulder_standard * Rotation.from_euler('zxy', [-np.pi/2, 0, 0])).as_rotvec())
+                       (rotation_right_shoulder_standard * Rotation.from_euler('zxy', [0, -np.pi/2, 0])).as_rotvec())
 
 
 def test_forward_kinematics_right_elbow_shoulder_pitch_only():
@@ -66,11 +66,11 @@ def test_forward_kinematics_right_elbow_shoulder_pitch_only():
             right_arm_length=1.0,
         )
 
-    position_right_elbow_standard_expected = rotation_right_shoulder_standard.apply(np.array([0, 0, -1])) + position_right_shoulder_standard
+    position_right_elbow_standard_expected = rotation_right_shoulder_standard.apply(np.array([-1, 0, 0])) + position_right_shoulder_standard
 
     assert np.allclose(position_right_elbow_standard, position_right_elbow_standard_expected)
     assert np.allclose(rotation_right_elbow_standard.as_rotvec(),
-                       (rotation_right_shoulder_standard * Rotation.from_euler('zxy', [0, 0, -np.pi/2])).as_rotvec())
+                       (rotation_right_shoulder_standard * Rotation.from_euler('zxy', [-np.pi/2, 0, 0])).as_rotvec())
 
 
 def test_forward_kinematics_right_elbow_shoulder_roll_and_pitch():
@@ -89,11 +89,11 @@ def test_forward_kinematics_right_elbow_shoulder_roll_and_pitch():
             right_arm_length=1.0,
         )
 
-    position_right_elbow_standard_expected = rotation_right_shoulder_standard.apply(np.array([-0.5, 1/np.sqrt(2), -0.5])) + position_right_shoulder_standard
+    position_right_elbow_standard_expected = rotation_right_shoulder_standard.apply(np.array([-0.5, -0.5, 1/np.sqrt(2)])) + position_right_shoulder_standard
 
     assert np.allclose(position_right_elbow_standard, position_right_elbow_standard_expected)
     assert np.allclose(rotation_right_elbow_standard.as_rotvec(),
-                       (rotation_right_shoulder_standard * Rotation.from_euler('xzy', [0, -np.pi / 4, -1 * np.pi / 4])).as_rotvec())  # pitch (-y axis) then roll (+z axis)
+                       (rotation_right_shoulder_standard * Rotation.from_euler('xzy', [-np.pi / 4, -1 * np.pi / 4, 0])).as_rotvec())  # pitch (-y axis) then roll (+z axis)
 
 
 def test_inverse_kinematics_right_shoulder_zero():
@@ -106,7 +106,7 @@ def test_inverse_kinematics_right_shoulder_zero():
     ik = InverseKinematics.inverse_kinematics_right_shoulder(
         position_right_shoulder_standard=position_right_shoulder_standard,
         rotation_right_shoulder_standard=rotation_right_shoulder_standard,
-        position_right_elbow_inertial=rotation_right_shoulder_standard.apply(np.array([-1, 0, 0])) + position_right_shoulder_standard,
+        position_right_elbow_inertial=rotation_right_shoulder_standard.apply(np.array([0, -1, 0])) + position_right_shoulder_standard,
     )
     assert np.allclose(ik['RShoulderRoll'], 0)
     assert np.allclose(ik['RShoulderPitch'], 0)
@@ -122,7 +122,7 @@ def test_inverse_kinematics_right_shoulder_shoulder_roll_only():
     ik = InverseKinematics.inverse_kinematics_right_shoulder(
         position_right_shoulder_standard=position_right_shoulder_standard,
         rotation_right_shoulder_standard=rotation_right_shoulder_standard,
-        position_right_elbow_inertial=rotation_right_shoulder_standard.apply(np.array([-1/np.sqrt(2), 1/np.sqrt(2), 0])) + position_right_shoulder_standard,
+        position_right_elbow_inertial=rotation_right_shoulder_standard.apply(np.array([0, -1/np.sqrt(2), 1/np.sqrt(2)])) + position_right_shoulder_standard,
     )
     assert np.allclose(ik['RShoulderRoll'], -np.pi/4)
     assert np.allclose(ik['RShoulderPitch'], 0)
@@ -138,7 +138,7 @@ def test_inverse_kinematics_right_shoulder_shoulder_pitch_only():
     ik = InverseKinematics.inverse_kinematics_right_shoulder(
         position_right_shoulder_standard=position_right_shoulder_standard,
         rotation_right_shoulder_standard=rotation_right_shoulder_standard,
-        position_right_elbow_inertial=rotation_right_shoulder_standard.apply(np.array([0, 0, -1])) + position_right_shoulder_standard,
+        position_right_elbow_inertial=rotation_right_shoulder_standard.apply(np.array([-1, 0, 0])) + position_right_shoulder_standard,
     )
     assert np.allclose(ik['RShoulderRoll'], 0)
     assert np.allclose(ik['RShoulderPitch'], np.pi/2)
@@ -154,7 +154,7 @@ def test_inverse_kinematics_right_shoulder_shoulder_roll_and_pitch():
     ik = InverseKinematics.inverse_kinematics_right_shoulder(
         position_right_shoulder_standard=position_right_shoulder_standard,
         rotation_right_shoulder_standard=rotation_right_shoulder_standard,
-        position_right_elbow_inertial=rotation_right_shoulder_standard.apply(np.array([-1.0/2, 1/np.sqrt(2), -1.0/2])) + position_right_shoulder_standard,
+        position_right_elbow_inertial=rotation_right_shoulder_standard.apply(np.array([-0.5, -0.5, 1/np.sqrt(2)])) + position_right_shoulder_standard,
     )
     assert np.allclose(ik['RShoulderRoll'], -np.pi / 4)
     assert np.allclose(ik['RShoulderPitch'], np.pi / 4)
