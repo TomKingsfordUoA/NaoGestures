@@ -247,8 +247,8 @@ class InverseKinematics:
             return theta_r, theta_y, position_left_hand_standard, rotation_left_hand_standard
 
         theta_y0 = [
-            arcsin_safe(-p_hat[0] / np.sin(theta_r)),
-            np.pi - arcsin_safe(-p_hat[0] / np.sin(theta_r)),
+            arcsin_safe(p_hat[0] / np.sin(theta_r)),
+            np.pi - arcsin_safe(p_hat[0] / np.sin(theta_r)),
         ]
         theta_y1 = [
             arccos_safe(p_hat[2] / np.sin(theta_r)),
@@ -388,7 +388,7 @@ class ForwardKinematics:
 
         rotation_left_hand_standard = (
                 rotation_left_elbow_standard *
-                Rotation.from_rotvec(theta_left_elbow_yaw * np.array([0, -1, 0])) *
+                Rotation.from_rotvec(theta_left_elbow_yaw * np.array([0, 1, 0])) *
                 Rotation.from_rotvec(theta_left_elbow_roll * np.array([1, 0, 0]))
         )
 
@@ -497,7 +497,7 @@ def arcsin_safe(arg):
     return np.arcsin(arg)
 
 
-def isclose_angles(a, b, rtol=1e-3, atol=1e-3):
+def isclose_angles(a, b, rtol=1e-3, atol=1e-2):
     if np.isclose(a, b, rtol=rtol, atol=atol):
         return True
     if np.isclose(2 * np.pi + a, b, rtol=rtol, atol=atol):

@@ -37,6 +37,10 @@ def main():
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     drawable_frames = [
+        'FKRightShoulder',
+        'FKLeftShoulder',
+        'FKRightElbow',
+        'FKLeftElbow',
         'Hips',
         # 'LeftShoulder',
         # 'RightShoulder',
@@ -77,7 +81,8 @@ def main():
         # print(ik[-1]['RElbowRoll'] * 180 / pi, ik[-1]['RElbowYaw'] * 180 / pi)
 
         for frame_name, position, rotation in ForwardKinematics.forward_kinematics(ik[-1], frames):
-            draw_frame(ax, frame_name, position, rotation, arrow_length=10)
+            if len(drawable_frames) == 0 or frame_name in drawable_frames:
+                draw_frame(ax, frame_name, position, rotation, arrow_length=10)
 
         for frame_name, (position, rotation) in frames.items():
             if len(drawable_frames) == 0 or frame_name in drawable_frames:

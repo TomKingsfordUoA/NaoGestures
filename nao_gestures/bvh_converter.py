@@ -7,6 +7,7 @@ import pandas as pd
 from numpy import pi
 from scipy.spatial.transform import Rotation
 
+from .kinematics import InverseKinematics
 from pymo.parsers import BVHParser
 from pymo.preprocessing import MocapParameterizer
 
@@ -27,11 +28,10 @@ class NaoBvhConverter:
 
     @staticmethod
     def bvh_to_dataframe_of_nao_gestures(mocap_data):
-        relevant_bvh_rotations = NaoBvhConverter._get_relevant_bvh_rotations(mocap_data)
-        nao_rotations_degrees = NaoBvhConverter._convert_bvh_rotations_to_nao_degrees(relevant_bvh_rotations)
-        nao_rotations_radians = {key: NaoBvhConverter._convert_series_degrees_to_radians(nao_rotations_degrees[key]) for
-                                 key in nao_rotations_degrees}
-        return NaoBvhConverter._convert_dict_of_series_to_df(nao_rotations_radians)
+        all_frames, index = NaoBvhConverter.get_bvh_frames(mocap_data)
+        all_frames = [NaoBvhConverter.add_standard_frames(frames) for frames in all_frames]
+        inverse_kinematics = [InverseKinematics.inverse_kinematics(frame) for frame in all_frames]
+        return pd.DataFrame(data=inverse_kinematics, index=index)
 
     @staticmethod
     def _get_relevant_bvh_rotations(mocap_data):
