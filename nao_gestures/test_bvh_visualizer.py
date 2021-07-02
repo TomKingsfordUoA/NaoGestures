@@ -13,7 +13,7 @@ def test_right_shoulder_forward_kinematics_zero():
 
     # Zero control input:
     position_right_elbow_standard, rotation_right_elbow_standard = \
-        ForwardKinematics.forward_kinematics_right_elbow(
+        ForwardKinematics.forward_kinematics_right_shoulder(
             theta_right_shoulder_pitch=0,
             theta_right_shoulder_roll=0,
             position_right_shoulder_standard=position_right_shoulder_standard,
@@ -36,7 +36,7 @@ def test_right_shoulder_forward_kinematics_shoulder_roll_only():
 
     # Shoulder roll only:
     position_right_elbow_standard, rotation_right_elbow_standard = \
-        ForwardKinematics.forward_kinematics_right_elbow(
+        ForwardKinematics.forward_kinematics_right_shoulder(
             theta_right_shoulder_pitch=0,
             theta_right_shoulder_roll=-np.pi/2,
             position_right_shoulder_standard=position_right_shoulder_standard,
@@ -59,7 +59,7 @@ def test_right_shoulder_forward_kinematics_shoulder_pitch_only():
 
     # Shoulder pitch only:
     position_right_elbow_standard, rotation_right_elbow_standard = \
-        ForwardKinematics.forward_kinematics_right_elbow(
+        ForwardKinematics.forward_kinematics_right_shoulder(
             theta_right_shoulder_pitch=np.pi/2,
             theta_right_shoulder_roll=0,
             position_right_shoulder_standard=position_right_shoulder_standard,
@@ -82,7 +82,7 @@ def test_right_shoulder_forward_kinematics_shoulder_roll_and_pitch():
 
     # Shoulder roll and pitch:
     position_right_elbow_standard, rotation_right_elbow_standard = \
-        ForwardKinematics.forward_kinematics_right_elbow(
+        ForwardKinematics.forward_kinematics_right_shoulder(
             theta_right_shoulder_pitch=np.pi / 4,
             theta_right_shoulder_roll=-np.pi / 4,
             position_right_shoulder_standard=position_right_shoulder_standard,
@@ -104,7 +104,7 @@ def test_right_shoulder_inverse_kinematics_zero():
     rotation_right_shoulder_standard = Rotation.from_rotvec(np.random.random([3]))
 
     # Zero control input:
-    theta_r, theta_p = InverseKinematics.inverse_kinematics_right_shoulder(
+    theta_r, theta_p, _, _ = InverseKinematics.inverse_kinematics_right_shoulder(
         position_right_shoulder_standard=position_right_shoulder_standard,
         rotation_right_shoulder_standard=rotation_right_shoulder_standard,
         position_right_elbow_inertial=rotation_right_shoulder_standard.apply(np.array([0, -1, 0])) + position_right_shoulder_standard,
@@ -120,7 +120,7 @@ def test_right_shoulder_inverse_kinematics_shoulder_roll_only():
     rotation_right_shoulder_standard = Rotation.from_rotvec(np.random.random([3]))
 
     # Shoulder roll only:
-    theta_r, theta_p = InverseKinematics.inverse_kinematics_right_shoulder(
+    theta_r, theta_p, _, _ = InverseKinematics.inverse_kinematics_right_shoulder(
         position_right_shoulder_standard=position_right_shoulder_standard,
         rotation_right_shoulder_standard=rotation_right_shoulder_standard,
         position_right_elbow_inertial=rotation_right_shoulder_standard.apply(np.array([0, -1/np.sqrt(2), 1/np.sqrt(2)])) + position_right_shoulder_standard,
@@ -136,7 +136,7 @@ def test_right_shoulder_inverse_kinematics_shoulder_pitch_only():
     rotation_right_shoulder_standard = Rotation.from_rotvec(np.random.random([3]))
 
     # Shoulder pitch only:
-    theta_r, theta_p = InverseKinematics.inverse_kinematics_right_shoulder(
+    theta_r, theta_p, _, _ = InverseKinematics.inverse_kinematics_right_shoulder(
         position_right_shoulder_standard=position_right_shoulder_standard,
         rotation_right_shoulder_standard=rotation_right_shoulder_standard,
         position_right_elbow_inertial=rotation_right_shoulder_standard.apply(np.array([-1, 0, 0])) + position_right_shoulder_standard,
@@ -152,7 +152,7 @@ def test_right_shoulder_inverse_kinematics_shoulder_roll_and_pitch():
     rotation_right_shoulder_standard = Rotation.from_rotvec(np.random.random([3]))
 
     # Shoulder roll and pitch:
-    theta_r, theta_p = InverseKinematics.inverse_kinematics_right_shoulder(
+    theta_r, theta_p, _, _ = InverseKinematics.inverse_kinematics_right_shoulder(
         position_right_shoulder_standard=position_right_shoulder_standard,
         rotation_right_shoulder_standard=rotation_right_shoulder_standard,
         position_right_elbow_inertial=rotation_right_shoulder_standard.apply(np.array([-0.5, -0.5, 1/np.sqrt(2)])) + position_right_shoulder_standard,
@@ -171,7 +171,7 @@ def test_right_shoulder_forward_then_inverse_kinematics_random_pitch():
     theta_right_shoulder_roll = 0
 
     position_right_elbow_standard, rotation_right_elbow_standard = \
-        ForwardKinematics.forward_kinematics_right_elbow(
+        ForwardKinematics.forward_kinematics_right_shoulder(
             theta_right_shoulder_pitch=theta_right_shoulder_pitch,
             theta_right_shoulder_roll=theta_right_shoulder_roll,
             position_right_shoulder_standard=position_right_shoulder_standard,
@@ -179,7 +179,7 @@ def test_right_shoulder_forward_then_inverse_kinematics_random_pitch():
             right_arm_length=1.0,
         )
 
-    theta_r, theta_p = InverseKinematics.inverse_kinematics_right_shoulder(
+    theta_r, theta_p, _, _ = InverseKinematics.inverse_kinematics_right_shoulder(
         position_right_shoulder_standard=position_right_shoulder_standard,
         rotation_right_shoulder_standard=rotation_right_shoulder_standard,
         position_right_elbow_inertial=position_right_elbow_standard,
@@ -199,7 +199,7 @@ def test_right_shoulder_forward_then_inverse_kinematics_random_roll():
     theta_right_shoulder_roll = np.random.random() * np.pi - np.pi / 2
 
     position_right_elbow_standard, rotation_right_elbow_standard = \
-        ForwardKinematics.forward_kinematics_right_elbow(
+        ForwardKinematics.forward_kinematics_right_shoulder(
             theta_right_shoulder_pitch=theta_right_shoulder_pitch,
             theta_right_shoulder_roll=theta_right_shoulder_roll,
             position_right_shoulder_standard=position_right_shoulder_standard,
@@ -207,7 +207,7 @@ def test_right_shoulder_forward_then_inverse_kinematics_random_roll():
             right_arm_length=1.0,
         )
 
-    theta_r, theta_p = InverseKinematics.inverse_kinematics_right_shoulder(
+    theta_r, theta_p, _, _ = InverseKinematics.inverse_kinematics_right_shoulder(
         position_right_shoulder_standard=position_right_shoulder_standard,
         rotation_right_shoulder_standard=rotation_right_shoulder_standard,
         position_right_elbow_inertial=position_right_elbow_standard,
@@ -230,7 +230,7 @@ def test_right_shoulder_forward_then_inverse_kinematics_random_pitch_and_roll():
         fk_arm_length = 10 * np.random.random()
 
         position_right_elbow_standard, rotation_right_elbow_standard = \
-            ForwardKinematics.forward_kinematics_right_elbow(
+            ForwardKinematics.forward_kinematics_right_shoulder(
                 theta_right_shoulder_pitch=theta_right_shoulder_pitch,
                 theta_right_shoulder_roll=theta_right_shoulder_roll,
                 position_right_shoulder_standard=position_right_shoulder_standard,
@@ -238,7 +238,7 @@ def test_right_shoulder_forward_then_inverse_kinematics_random_pitch_and_roll():
                 right_arm_length=fk_arm_length,
             )
 
-        theta_r, theta_p = InverseKinematics.inverse_kinematics_right_shoulder(
+        theta_r, theta_p, _, _ = InverseKinematics.inverse_kinematics_right_shoulder(
             position_right_shoulder_standard=position_right_shoulder_standard,
             rotation_right_shoulder_standard=rotation_right_shoulder_standard,
             position_right_elbow_inertial=position_right_elbow_standard,
@@ -259,14 +259,14 @@ def test_right_shoulder_inverse_then_forward_kinematics_random():
         initial_arm_length = np.linalg.norm(position_right_elbow_standard_initial - position_right_shoulder_standard)
         fk_arm_length = 10 * np.random.random()
 
-        theta_r, theta_p = InverseKinematics.inverse_kinematics_right_shoulder(
+        theta_r, theta_p, _, _ = InverseKinematics.inverse_kinematics_right_shoulder(
             position_right_shoulder_standard=np.array(position_right_shoulder_standard),
             rotation_right_shoulder_standard=rotation_right_shoulder_standard,
             position_right_elbow_inertial=position_right_elbow_standard_initial,
         )
 
         position_right_elbow_standard, rotation_right_elbow_standard = \
-            ForwardKinematics.forward_kinematics_right_elbow(
+            ForwardKinematics.forward_kinematics_right_shoulder(
                 theta_right_shoulder_pitch=theta_p,
                 theta_right_shoulder_roll=theta_r,
                 position_right_shoulder_standard=position_right_shoulder_standard,
@@ -301,7 +301,7 @@ def test_left_shoulder_forward_then_inverse_kinematics_random_pitch():
     theta_left_shoulder_roll = 0
 
     position_left_elbow_standard, rotation_left_elbow_standard = \
-        ForwardKinematics.forward_kinematics_left_elbow(
+        ForwardKinematics.forward_kinematics_left_shoulder(
             theta_left_shoulder_pitch=theta_left_shoulder_pitch,
             theta_left_shoulder_roll=theta_left_shoulder_roll,
             position_left_shoulder_standard=position_left_shoulder_standard,
@@ -309,7 +309,7 @@ def test_left_shoulder_forward_then_inverse_kinematics_random_pitch():
             left_arm_length=1.0,
         )
 
-    theta_r, theta_p = InverseKinematics.inverse_kinematics_left_shoulder(
+    theta_r, theta_p, _, _ = InverseKinematics.inverse_kinematics_left_shoulder(
         position_left_shoulder_standard=position_left_shoulder_standard,
         rotation_left_shoulder_standard=rotation_left_shoulder_standard,
         position_left_elbow_inertial=position_left_elbow_standard,
@@ -329,7 +329,7 @@ def test_left_shoulder_forward_then_inverse_kinematics_random_roll():
     theta_left_shoulder_roll = np.random.random() * np.pi - np.pi / 2
 
     position_left_elbow_standard, rotation_left_elbow_standard = \
-        ForwardKinematics.forward_kinematics_left_elbow(
+        ForwardKinematics.forward_kinematics_left_shoulder(
             theta_left_shoulder_pitch=theta_left_shoulder_pitch,
             theta_left_shoulder_roll=theta_left_shoulder_roll,
             position_left_shoulder_standard=position_left_shoulder_standard,
@@ -337,7 +337,7 @@ def test_left_shoulder_forward_then_inverse_kinematics_random_roll():
             left_arm_length=1.0,
         )
 
-    theta_r, theta_p = InverseKinematics.inverse_kinematics_left_shoulder(
+    theta_r, theta_p, _, _ = InverseKinematics.inverse_kinematics_left_shoulder(
         position_left_shoulder_standard=position_left_shoulder_standard,
         rotation_left_shoulder_standard=rotation_left_shoulder_standard,
         position_left_elbow_inertial=position_left_elbow_standard,
@@ -360,7 +360,7 @@ def test_left_shoulder_forward_then_inverse_kinematics_random_pitch_and_roll():
         fk_arm_length = 10 * np.random.random()
 
         position_left_elbow_standard, rotation_left_elbow_standard = \
-            ForwardKinematics.forward_kinematics_left_elbow(
+            ForwardKinematics.forward_kinematics_left_shoulder(
                 theta_left_shoulder_pitch=theta_left_shoulder_pitch,
                 theta_left_shoulder_roll=theta_left_shoulder_roll,
                 position_left_shoulder_standard=position_left_shoulder_standard,
@@ -368,7 +368,7 @@ def test_left_shoulder_forward_then_inverse_kinematics_random_pitch_and_roll():
                 left_arm_length=fk_arm_length,
             )
 
-        theta_r, theta_p = InverseKinematics.inverse_kinematics_left_shoulder(
+        theta_r, theta_p, _, _ = InverseKinematics.inverse_kinematics_left_shoulder(
             position_left_shoulder_standard=position_left_shoulder_standard,
             rotation_left_shoulder_standard=rotation_left_shoulder_standard,
             position_left_elbow_inertial=position_left_elbow_standard,
@@ -389,14 +389,14 @@ def test_left_shoulder_inverse_then_forward_kinematics_random():
         initial_arm_length = np.linalg.norm(position_left_elbow_standard_initial - position_left_shoulder_standard)
         fk_arm_length = 10 * np.random.random()
 
-        theta_r, theta_p = InverseKinematics.inverse_kinematics_left_shoulder(
+        theta_r, theta_p, _, _ = InverseKinematics.inverse_kinematics_left_shoulder(
             position_left_shoulder_standard=np.array(position_left_shoulder_standard),
             rotation_left_shoulder_standard=rotation_left_shoulder_standard,
             position_left_elbow_inertial=position_left_elbow_standard_initial,
         )
 
         position_left_elbow_standard, rotation_left_elbow_standard = \
-            ForwardKinematics.forward_kinematics_left_elbow(
+            ForwardKinematics.forward_kinematics_left_shoulder(
                 theta_left_shoulder_pitch=theta_p,
                 theta_left_shoulder_roll=theta_r,
                 position_left_shoulder_standard=position_left_shoulder_standard,
@@ -423,6 +423,36 @@ def test_right_elbow_ik():
     raise NotImplementedError()
 
 
-@pytest.mark.xfail
-def test_right_elbow_ik_then_fk():
-    raise NotImplementedError()
+def test_right_elbow_inverse_then_forward_kinematics_random():
+    np.random.seed(12)
+    for _ in range(10):
+        # Arbitrary elbow pose:
+        position_right_elbow_standard = np.random.random([3])
+        rotation_right_elbow_standard= Rotation.from_rotvec(np.random.random([3]))
+
+        # Random hand pose:
+        position_right_hand_inertial_initial = np.random.random([3])
+        initial_right_forearm_length = np.linalg.norm(position_right_hand_inertial_initial - position_right_elbow_standard)
+        fk_forearm_length = 10 * np.random.random()
+
+        theta_r, theta_y, _, _ = \
+            InverseKinematics.inverse_kinematics_right_elbow(
+                position_right_elbow_standard=position_right_elbow_standard,
+                rotation_right_elbow_standard=rotation_right_elbow_standard,
+                position_right_hand_inertial=position_right_hand_inertial_initial,
+            )
+
+        position_right_hand_standard, rotation_right_hand_standard = \
+            ForwardKinematics.forward_kinematics_right_elbow(
+                theta_right_elbow_roll=theta_r,
+                theta_right_elbow_yaw=theta_y,
+                position_right_elbow_standard=position_right_elbow_standard,
+                rotation_right_elbow_standard=rotation_right_elbow_standard,
+                right_forearm_length=fk_forearm_length,
+            )
+
+        # Un-normalize length:
+        position_right_hand_standard = position_right_elbow_standard + (position_right_hand_standard - position_right_elbow_standard) * (initial_right_forearm_length / fk_forearm_length)
+
+        # Give a relatively large tolerance as small errors in IK can add to relatively large differences here
+        assert np.allclose(position_right_hand_standard, position_right_hand_inertial_initial, atol=0.01)

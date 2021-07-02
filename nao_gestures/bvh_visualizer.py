@@ -202,7 +202,7 @@ def arcsin_safe(arg):
     return np.arcsin(arg)
 
 
-def isclose_angles(a, b, rtol=1.e-3, atol=1.e-6):
+def isclose_angles(a, b, rtol=1e-3, atol=1e-3):
     if np.isclose(a, b, rtol=rtol, atol=atol):
         return True
     if np.isclose(2 * np.pi + a, b, rtol=rtol, atol=atol):
@@ -225,6 +225,8 @@ class InverseKinematics:
         # Convert right elbow position to right arm standard frame, relative to that frame's origin
         p_elbow_hat = make_unit(rotation_right_shoulder_standard.inv().apply(position_right_elbow_inertial - position_right_shoulder_standard))
 
+        right_arm_length = np.linalg.norm(position_right_elbow_inertial - position_right_shoulder_standard)
+
         # The following is an analytical inversion of the forward kinematics:
         # p_elbow = R_y (-theta_p) R_z (theta_r) [-1 0 0]^T
 
@@ -246,7 +248,16 @@ class InverseKinematics:
 
         # In the case theta_r = -pi/2 => cos(theta_r) = 0, we have gimbal lock (and any pitch is admissible)
         if np.isclose(np.abs(theta_r), np.pi/2):
-            return theta_r, 0
+            theta_p = 0
+            position_right_elbow_standard, rotation_right_elbow_standard = \
+                ForwardKinematics.forward_kinematics_right_shoulder(
+                    theta_right_shoulder_pitch=theta_p,
+                    theta_right_shoulder_roll=theta_r,
+                    position_right_shoulder_standard=position_right_shoulder_standard,
+                    rotation_right_shoulder_standard=rotation_right_shoulder_standard,
+                    right_arm_length=right_arm_length,
+                )
+            return theta_r, theta_p, position_right_elbow_standard, rotation_right_elbow_standard
 
         theta_p0 = [
             arccos_safe(-p_elbow_hat[1] / np.cos(theta_r)),
@@ -266,7 +277,15 @@ class InverseKinematics:
         else:
             raise ValueError("Failed to find a pitch")
 
-        return theta_r, theta_p
+        position_right_elbow_standard, rotation_right_elbow_standard = \
+            ForwardKinematics.forward_kinematics_right_shoulder(
+                theta_right_shoulder_pitch=theta_p,
+                theta_right_shoulder_roll=theta_r,
+                position_right_shoulder_standard=position_right_shoulder_standard,
+                rotation_right_shoulder_standard=rotation_right_shoulder_standard,
+                right_arm_length=right_arm_length,
+            )
+        return theta_r, theta_p, position_right_elbow_standard, rotation_right_elbow_standard
 
     @staticmethod
     def inverse_kinematics_left_shoulder(
@@ -276,6 +295,8 @@ class InverseKinematics:
 
         # Convert right elbow position to right arm standard frame, relative to that frame's origin
         p_elbow_hat = make_unit(rotation_left_shoulder_standard.inv().apply(position_left_elbow_inertial - position_left_shoulder_standard))
+
+        left_arm_length = np.linalg.norm(position_left_elbow_inertial - position_left_shoulder_standard)
 
         # The following is an analytical inversion of the forward kinematics:
         # p_elbow = R_y (-theta_p) R_z (theta_r) [-1 0 0]^T
@@ -298,7 +319,16 @@ class InverseKinematics:
 
         # In the case theta_r = -pi/2 => cos(theta_r) = 0, we have gimbal lock (and any pitch is admissible)
         if np.isclose(np.abs(theta_r), np.pi / 2):
-            return theta_r, 0
+            theta_p = 0
+            position_left_elbow_standard, rotation_left_elbow_standard = \
+                ForwardKinematics.forward_kinematics_left_shoulder(
+                    theta_left_shoulder_pitch=theta_p,
+                    theta_left_shoulder_roll=theta_r,
+                    position_left_shoulder_standard=position_left_shoulder_standard,
+                    rotation_left_shoulder_standard=rotation_left_shoulder_standard,
+                    left_arm_length=left_arm_length,
+                )
+            return theta_r, theta_p, position_left_elbow_standard, rotation_left_elbow_standard
 
         theta_p0 = [
             arccos_safe(p_elbow_hat[1] / np.cos(theta_r)),
@@ -318,30 +348,26 @@ class InverseKinematics:
         else:
             raise ValueError("Failed to find a pitch")
 
-        return theta_r, theta_p
+        position_left_elbow_standard, rotation_left_elbow_standard = \
+            ForwardKinematics.forward_kinematics_left_shoulder(
+                theta_left_shoulder_pitch=theta_p,
+                theta_left_shoulder_roll=theta_r,
+                position_left_shoulder_standard=position_left_shoulder_standard,
+                rotation_left_shoulder_standard=rotation_left_shoulder_standard,
+                left_arm_length=left_arm_length,
+            )
+        return theta_r, theta_p, position_left_elbow_standard, rotation_left_elbow_standard
 
     @staticmethod
     def inverse_kinematics_right_elbow(
-            position_right_shoulder_standard,
-            rotation_right_shoulder_standard,
-            theta_right_shoulder_pitch,
-            theta_right_shoulder_roll,
-            position_right_hand_inertial,
-            position_right_elbow_inertial,
-            right_arm_length):
-
-        # Forward kinematics at the shoulder gives us the standard frame at the elbow:
-        position_right_elbow_standard, rotation_right_elbow_standard = \
-            ForwardKinematics.forward_kinematics_right_elbow(
-                theta_right_shoulder_pitch=theta_right_shoulder_pitch,
-                theta_right_shoulder_roll=theta_right_shoulder_roll,
-                position_right_shoulder_standard=position_right_shoulder_standard,
-                rotation_right_shoulder_standard=rotation_right_shoulder_standard,
-                right_arm_length=right_arm_length,
-            )
+            position_right_elbow_standard,
+            rotation_right_elbow_standard,
+            position_right_hand_inertial):
 
         # Calculate the position vector of the hand in the elbow standard frame:
-        p_hat = make_unit(rotation_right_elbow_standard.inv().apply(position_right_hand_inertial - position_right_elbow_inertial))
+        p_hat = make_unit(rotation_right_elbow_standard.inv().apply(position_right_hand_inertial - position_right_elbow_standard))
+
+        right_forearm_length = np.linalg.norm(position_right_hand_inertial - position_right_elbow_standard)
 
         theta_r = [
             normalize_angle(arccos_safe(-p_hat[1])),
@@ -349,18 +375,27 @@ class InverseKinematics:
         ]
 
         # There will be two candidates and we'll discard the one in the backward direction (most consistent with Nao's kinematics)
-        theta_r = [angle for angle in theta_r if angle >= 0]
+        theta_r = {angle for angle in theta_r if angle >= 0}
         if len(theta_r) != 1:
             raise ValueError("Expected exactly one candidate theta_r")
-        theta_r = theta_r[0]
+        theta_r = next(theta_r.__iter__())
 
         # Detect gimbal lock:
         if np.isclose(theta_r, 0) or np.isclose(np.abs(theta_r), np.pi):
-            return theta_r, 0
+            theta_y = 0
+            position_right_hand_standard, rotation_right_hand_standard = \
+                ForwardKinematics.forward_kinematics_right_elbow(
+                    theta_right_elbow_roll=theta_r,
+                    theta_right_elbow_yaw=theta_y,
+                    position_right_elbow_standard=position_right_elbow_standard,
+                    rotation_right_elbow_standard=rotation_right_elbow_standard,
+                    right_forearm_length=right_forearm_length,
+                )
+            return theta_r, theta_y, position_right_hand_standard, rotation_right_hand_standard
 
         theta_y0 = [
-            arcsin_safe(-p_hat[0] / np.sin(theta_r)),
-            np.pi - arcsin_safe(-p_hat[0] / np.sin(theta_r)),
+            arcsin_safe(p_hat[0] / np.sin(theta_r)),
+            np.pi - arcsin_safe(p_hat[0] / np.sin(theta_r)),
         ]
         theta_y1 = [
             arccos_safe(-p_hat[2] / np.sin(theta_r)),
@@ -374,7 +409,15 @@ class InverseKinematics:
         else:
             raise ValueError("Failed to find a yaw")
 
-        return theta_r, theta_y
+        position_right_hand_standard, rotation_right_hand_standard = \
+            ForwardKinematics.forward_kinematics_right_elbow(
+                theta_right_elbow_roll=theta_r,
+                theta_right_elbow_yaw=theta_y,
+                position_right_elbow_standard=position_right_elbow_standard,
+                rotation_right_elbow_standard=rotation_right_elbow_standard,
+                right_forearm_length=right_forearm_length,
+            )
+        return theta_r, theta_y, position_right_hand_standard, rotation_right_hand_standard
 
     @staticmethod
     def inverse_kinematics(bvh_frames_plus_standard):
@@ -385,30 +428,23 @@ class InverseKinematics:
         position_right_hand_inertial, rotation_right_hand_inertial = bvh_frames_plus_standard['RightHand']
         position_left_hand_inertial, rotation_left_hand_inertial = bvh_frames_plus_standard['LeftHand']
 
-        right_arm_length = np.linalg.norm(position_right_elbow_inertial - position_right_shoulder_standard)
-        left_arm_length = np.linalg.norm(position_left_elbow_inertial - position_left_shoulder_standard)
-
-        theta_right_shoulder_roll, theta_right_shoulder_pitch = \
+        theta_right_shoulder_roll, theta_right_shoulder_pitch, position_right_elbow_standard, rotation_right_elbow_standard = \
             InverseKinematics.inverse_kinematics_right_shoulder(
                 position_right_shoulder_standard=position_right_shoulder_standard,
                 rotation_right_shoulder_standard=rotation_right_shoulder_standard,
                 position_right_elbow_inertial=position_right_elbow_inertial,
             )
-        theta_left_shoulder_roll, theta_left_shoulder_pitch = \
+        theta_left_shoulder_roll, theta_left_shoulder_pitch, position_left_elbow_standard, rotation_left_elbow_standard = \
             InverseKinematics.inverse_kinematics_left_shoulder(
                 position_left_shoulder_standard=position_left_shoulder_standard,
                 rotation_left_shoulder_standard=rotation_left_shoulder_standard,
                 position_left_elbow_inertial=position_left_elbow_inertial,
             )
-        theta_right_elbow_roll, theta_right_elbow_yaw = \
+        theta_right_elbow_roll, theta_right_elbow_yaw, position_right_hand_standard, rotation_right_hand_standard = \
             InverseKinematics.inverse_kinematics_right_elbow(
-                position_right_shoulder_standard=position_right_shoulder_standard,
-                rotation_right_shoulder_standard=rotation_right_shoulder_standard,
-                theta_right_shoulder_pitch=theta_right_shoulder_pitch,
-                theta_right_shoulder_roll=theta_right_shoulder_roll,
+                position_right_elbow_standard=position_right_elbow_standard,
+                rotation_right_elbow_standard=rotation_right_elbow_standard,
                 position_right_hand_inertial=position_right_hand_inertial,
-                position_right_elbow_inertial=position_right_elbow_inertial,
-                right_arm_length=right_arm_length,
             )
 
         return {
@@ -426,7 +462,7 @@ class ForwardKinematics:
         raise NotImplementedError()
 
     @staticmethod
-    def forward_kinematics_right_elbow(
+    def forward_kinematics_right_shoulder(
             theta_right_shoulder_pitch,
             theta_right_shoulder_roll,
             position_right_shoulder_standard,
@@ -444,7 +480,7 @@ class ForwardKinematics:
         return position_right_elbow_standard, rotation_right_elbow_standard
 
     @staticmethod
-    def forward_kinematics_left_elbow(
+    def forward_kinematics_left_shoulder(
             theta_left_shoulder_pitch,
             theta_left_shoulder_roll,
             position_left_shoulder_standard,
@@ -462,8 +498,7 @@ class ForwardKinematics:
         return position_left_elbow_standard, rotation_left_elbow_standard
 
     @staticmethod
-    # TODO(TK): rename the forward kinematics so they reference the joint they're operating on, not the end effector
-    def forward_kinematics_right_hand(
+    def forward_kinematics_right_elbow(
             theta_right_elbow_roll,
             theta_right_elbow_yaw,
             position_right_elbow_standard,
@@ -491,19 +526,19 @@ class ForwardKinematics:
         position_right_shoulder_standard, rotation_right_shoulder_standard = bvh_frames_plus_standard['RightArmStandard']
         position_left_shoulder_standard, rotation_left_shoulder_standard = bvh_frames_plus_standard['LeftArmStandard']
 
-        position_right_elbow_standard, rotation_right_elbow_standard = ForwardKinematics.forward_kinematics_right_elbow(
+        position_right_elbow_standard, rotation_right_elbow_standard = ForwardKinematics.forward_kinematics_right_shoulder(
             ik['RShoulderPitch'],
             ik['RShoulderRoll'],
             position_right_shoulder_standard,
             rotation_right_shoulder_standard,
             right_arm_length)
-        position_left_elbow_standard, rotation_left_elbow_standard = ForwardKinematics.forward_kinematics_left_elbow(
+        position_left_elbow_standard, rotation_left_elbow_standard = ForwardKinematics.forward_kinematics_left_shoulder(
             ik['LShoulderPitch'],
             ik['LShoulderRoll'],
             position_left_shoulder_standard,
             rotation_left_shoulder_standard,
             left_arm_length)
-        position_right_hand_standard, rotation_right_hand_standard = ForwardKinematics.forward_kinematics_right_hand(
+        position_right_hand_standard, rotation_right_hand_standard = ForwardKinematics.forward_kinematics_right_elbow(
             ik['RElbowRoll'],
             ik['RElbowYaw'],
             position_right_elbow_standard,
