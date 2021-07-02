@@ -7,6 +7,10 @@ import naoqi
 
 
 class NaoGesturePlayer:
+    """
+    Plays a dataframe of Nao joint rotations on a Nao robot.
+    """
+
     def __init__(self, robot_ip, robot_port, my_ip, my_port, stream_err=sys.stderr):
         self._robot_ip = robot_ip
         self._robot_port = robot_port

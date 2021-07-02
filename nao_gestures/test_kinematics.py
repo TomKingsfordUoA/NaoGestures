@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from scipy.spatial.transform import Rotation
 
-from nao_gestures.bvh_visualizer import ForwardKinematics, InverseKinematics, isclose_angles
+from nao_gestures.kinematics import InverseKinematics, ForwardKinematics, isclose_angles
 
 
 def test_right_shoulder_forward_kinematics_zero():
