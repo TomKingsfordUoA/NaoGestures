@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from scipy.spatial.transform import Rotation
 
-from nao_gestures.bvh_visualizer import ForwardKinematics, InverseKinematics
+from nao_gestures.bvh_visualizer import ForwardKinematics, InverseKinematics, isclose_angles
 
 
 def test_right_shoulder_forward_kinematics_zero():
@@ -161,63 +161,7 @@ def test_right_shoulder_inverse_kinematics_shoulder_roll_and_pitch():
     assert np.allclose(theta_p, np.pi / 4)
 
 
-def test_right_shoulder_forward_then_inverse_kinematics_random_pitch():
-    np.random.seed(43)
-    
-    position_right_shoulder_standard = np.random.random([3])
-    rotation_right_shoulder_standard = Rotation.from_rotvec(np.random.random([3]))
-
-    theta_right_shoulder_pitch = np.random.random() * 2 * np.pi - np.pi
-    theta_right_shoulder_roll = 0
-
-    position_right_elbow_standard, rotation_right_elbow_standard = \
-        ForwardKinematics.forward_kinematics_right_shoulder(
-            theta_right_shoulder_pitch=theta_right_shoulder_pitch,
-            theta_right_shoulder_roll=theta_right_shoulder_roll,
-            position_right_shoulder_standard=position_right_shoulder_standard,
-            rotation_right_shoulder_standard=rotation_right_shoulder_standard,
-            right_arm_length=1.0,
-        )
-
-    theta_r, theta_p, _, _ = InverseKinematics.inverse_kinematics_right_shoulder(
-        position_right_shoulder_standard=position_right_shoulder_standard,
-        rotation_right_shoulder_standard=rotation_right_shoulder_standard,
-        position_right_elbow_inertial=position_right_elbow_standard,
-    )
-
-    assert np.isclose(theta_p, theta_right_shoulder_pitch)
-    assert np.isclose(theta_r, theta_right_shoulder_roll)
-
-
-def test_right_shoulder_forward_then_inverse_kinematics_random_roll():
-    np.random.seed(42)
-    
-    position_right_shoulder_standard = np.random.random([3])
-    rotation_right_shoulder_standard = Rotation.from_rotvec(np.random.random([3]))
-
-    theta_right_shoulder_pitch = 0
-    theta_right_shoulder_roll = np.random.random() * np.pi - np.pi / 2
-
-    position_right_elbow_standard, rotation_right_elbow_standard = \
-        ForwardKinematics.forward_kinematics_right_shoulder(
-            theta_right_shoulder_pitch=theta_right_shoulder_pitch,
-            theta_right_shoulder_roll=theta_right_shoulder_roll,
-            position_right_shoulder_standard=position_right_shoulder_standard,
-            rotation_right_shoulder_standard=rotation_right_shoulder_standard,
-            right_arm_length=1.0,
-        )
-
-    theta_r, theta_p, _, _ = InverseKinematics.inverse_kinematics_right_shoulder(
-        position_right_shoulder_standard=position_right_shoulder_standard,
-        rotation_right_shoulder_standard=rotation_right_shoulder_standard,
-        position_right_elbow_inertial=position_right_elbow_standard,
-    )
-
-    assert np.isclose(theta_p, theta_right_shoulder_pitch)
-    assert np.isclose(theta_r, theta_right_shoulder_roll)
-
-
-def test_right_shoulder_forward_then_inverse_kinematics_random_pitch_and_roll():
+def test_right_shoulder_forward_then_inverse_kinematics_random():
     np.random.seed(12)
     
     for _ in range(10):
@@ -291,63 +235,7 @@ def test_left_shoulder_ik():
     raise NotImplementedError()
 
 
-def test_left_shoulder_forward_then_inverse_kinematics_random_pitch():
-    np.random.seed(43)
-
-    position_left_shoulder_standard = np.random.random([3])
-    rotation_left_shoulder_standard = Rotation.from_rotvec(np.random.random([3]))
-
-    theta_left_shoulder_pitch = np.random.random() * 2 * np.pi - np.pi
-    theta_left_shoulder_roll = 0
-
-    position_left_elbow_standard, rotation_left_elbow_standard = \
-        ForwardKinematics.forward_kinematics_left_shoulder(
-            theta_left_shoulder_pitch=theta_left_shoulder_pitch,
-            theta_left_shoulder_roll=theta_left_shoulder_roll,
-            position_left_shoulder_standard=position_left_shoulder_standard,
-            rotation_left_shoulder_standard=rotation_left_shoulder_standard,
-            left_arm_length=1.0,
-        )
-
-    theta_r, theta_p, _, _ = InverseKinematics.inverse_kinematics_left_shoulder(
-        position_left_shoulder_standard=position_left_shoulder_standard,
-        rotation_left_shoulder_standard=rotation_left_shoulder_standard,
-        position_left_elbow_inertial=position_left_elbow_standard,
-    )
-
-    assert np.isclose(theta_p, theta_left_shoulder_pitch)
-    assert np.isclose(theta_r, theta_left_shoulder_roll)
-
-
-def test_left_shoulder_forward_then_inverse_kinematics_random_roll():
-    np.random.seed(42)
-
-    position_left_shoulder_standard = np.random.random([3])
-    rotation_left_shoulder_standard = Rotation.from_rotvec(np.random.random([3]))
-
-    theta_left_shoulder_pitch = 0
-    theta_left_shoulder_roll = np.random.random() * np.pi - np.pi / 2
-
-    position_left_elbow_standard, rotation_left_elbow_standard = \
-        ForwardKinematics.forward_kinematics_left_shoulder(
-            theta_left_shoulder_pitch=theta_left_shoulder_pitch,
-            theta_left_shoulder_roll=theta_left_shoulder_roll,
-            position_left_shoulder_standard=position_left_shoulder_standard,
-            rotation_left_shoulder_standard=rotation_left_shoulder_standard,
-            left_arm_length=1.0,
-        )
-
-    theta_r, theta_p, _, _ = InverseKinematics.inverse_kinematics_left_shoulder(
-        position_left_shoulder_standard=position_left_shoulder_standard,
-        rotation_left_shoulder_standard=rotation_left_shoulder_standard,
-        position_left_elbow_inertial=position_left_elbow_standard,
-    )
-
-    assert np.isclose(theta_p, theta_left_shoulder_pitch)
-    assert np.isclose(theta_r, theta_left_shoulder_roll)
-
-
-def test_left_shoulder_forward_then_inverse_kinematics_random_pitch_and_roll():
+def test_left_shoulder_forward_then_inverse_kinematics_random():
     np.random.seed(12)
 
     for _ in range(10):
@@ -423,6 +311,37 @@ def test_right_elbow_ik():
     raise NotImplementedError()
 
 
+def test_right_elbow_forward_then_inverse_kinematics_random():
+    np.random.seed(12)
+
+    for _ in range(10):
+        # Arbitrary elbow pose:
+        position_right_elbow_standard = np.random.random([3])
+        rotation_right_elbow_standard = Rotation.from_rotvec(np.random.random([3]))
+
+        theta_right_elbow_roll = np.random.random() * np.pi
+        theta_right_elbow_yaw = np.random.random() * 2 * np.pi - np.pi
+        fk_forearm_length = 10 * np.random.random()
+
+        position_right_hand_standard, rotation_right_hand_standard = \
+            ForwardKinematics.forward_kinematics_right_elbow(
+                theta_right_elbow_roll=theta_right_elbow_roll,
+                theta_right_elbow_yaw=theta_right_elbow_yaw,
+                position_right_elbow_standard=position_right_elbow_standard,
+                rotation_right_elbow_standard=rotation_right_elbow_standard,
+                right_forearm_length=fk_forearm_length,
+            )
+
+        theta_r, theta_y, _, _ = InverseKinematics.inverse_kinematics_right_elbow(
+            position_right_elbow_standard=position_right_elbow_standard,
+            rotation_right_elbow_standard=rotation_right_elbow_standard,
+            position_right_hand_inertial=position_right_hand_standard,
+        )
+
+        assert isclose_angles(theta_r, theta_right_elbow_roll)
+        assert isclose_angles(theta_y, theta_right_elbow_yaw)
+
+
 def test_right_elbow_inverse_then_forward_kinematics_random():
     np.random.seed(12)
     for _ in range(10):
@@ -456,3 +375,79 @@ def test_right_elbow_inverse_then_forward_kinematics_random():
 
         # Give a relatively large tolerance as small errors in IK can add to relatively large differences here
         assert np.allclose(position_right_hand_standard, position_right_hand_inertial_initial, atol=0.01)
+
+
+@pytest.mark.xfail
+def test_left_elbow_fk():
+    raise NotImplementedError()
+
+
+@pytest.mark.xfail
+def test_left_elbow_ik():
+    raise NotImplementedError()
+
+
+def test_left_elbow_forward_then_inverse_kinematics_random():
+    np.random.seed(12)
+
+    for _ in range(10):
+        # Arbitrary elbow pose:
+        position_left_elbow_standard = np.random.random([3])
+        rotation_left_elbow_standard = Rotation.from_rotvec(np.random.random([3]))
+
+        theta_left_elbow_roll = -np.random.random() * np.pi
+        theta_left_elbow_yaw = np.random.random() * 2 * np.pi - np.pi
+        fk_forearm_length = 10 * np.random.random()
+
+        position_left_hand_standard, rotation_left_hand_standard = \
+            ForwardKinematics.forward_kinematics_left_elbow(
+                theta_left_elbow_roll=theta_left_elbow_roll,
+                theta_left_elbow_yaw=theta_left_elbow_yaw,
+                position_left_elbow_standard=position_left_elbow_standard,
+                rotation_left_elbow_standard=rotation_left_elbow_standard,
+                left_forearm_length=fk_forearm_length,
+            )
+
+        theta_r, theta_y, _, _ = InverseKinematics.inverse_kinematics_left_elbow(
+            position_left_elbow_standard=position_left_elbow_standard,
+            rotation_left_elbow_standard=rotation_left_elbow_standard,
+            position_left_hand_inertial=position_left_hand_standard,
+        )
+
+        assert isclose_angles(theta_r, theta_left_elbow_roll)
+        assert isclose_angles(theta_y, theta_left_elbow_yaw)
+
+
+def test_left_elbow_inverse_then_forward_kinematics_random():
+    np.random.seed(12)
+    for _ in range(10):
+        # Arbitrary elbow pose:
+        position_left_elbow_standard = np.random.random([3])
+        rotation_left_elbow_standard= Rotation.from_rotvec(np.random.random([3]))
+
+        # Random hand pose:
+        position_left_hand_inertial_initial = np.random.random([3])
+        initial_left_forearm_length = np.linalg.norm(position_left_hand_inertial_initial - position_left_elbow_standard)
+        fk_forearm_length = 10 * np.random.random()
+
+        theta_r, theta_y, _, _ = \
+            InverseKinematics.inverse_kinematics_left_elbow(
+                position_left_elbow_standard=position_left_elbow_standard,
+                rotation_left_elbow_standard=rotation_left_elbow_standard,
+                position_left_hand_inertial=position_left_hand_inertial_initial,
+            )
+
+        position_left_hand_standard, rotation_left_hand_standard = \
+            ForwardKinematics.forward_kinematics_left_elbow(
+                theta_left_elbow_roll=theta_r,
+                theta_left_elbow_yaw=theta_y,
+                position_left_elbow_standard=position_left_elbow_standard,
+                rotation_left_elbow_standard=rotation_left_elbow_standard,
+                left_forearm_length=fk_forearm_length,
+            )
+
+        # Un-normalize length:
+        position_left_hand_standard = position_left_elbow_standard + (position_left_hand_standard - position_left_elbow_standard) * (initial_left_forearm_length / fk_forearm_length)
+
+        # Give a relatively large tolerance as small errors in IK can add to relatively large differences here
+        assert np.allclose(position_left_hand_standard, position_left_hand_inertial_initial, atol=0.01)

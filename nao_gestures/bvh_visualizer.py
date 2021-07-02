@@ -408,6 +408,7 @@ class InverseKinematics:
             theta_y = theta_y0[1]
         else:
             raise ValueError("Failed to find a yaw")
+        theta_y = normalize_angle(theta_y)
 
         position_right_hand_standard, rotation_right_hand_standard = \
             ForwardKinematics.forward_kinematics_right_elbow(
@@ -418,6 +419,69 @@ class InverseKinematics:
                 right_forearm_length=right_forearm_length,
             )
         return theta_r, theta_y, position_right_hand_standard, rotation_right_hand_standard
+
+    @staticmethod
+    def inverse_kinematics_left_elbow(
+            position_left_elbow_standard,
+            rotation_left_elbow_standard,
+            position_left_hand_inertial):
+
+        # Calculate the position vector of the hand in the elbow standard frame:
+        p_hat = make_unit(
+            rotation_left_elbow_standard.inv().apply(position_left_hand_inertial - position_left_elbow_standard))
+
+        left_forearm_length = np.linalg.norm(position_left_hand_inertial - position_left_elbow_standard)
+
+        theta_r = [
+            normalize_angle(arccos_safe(p_hat[1])),
+            normalize_angle(-arccos_safe(p_hat[1])),
+        ]
+
+        # There will be two candidates and we'll discard the one in the forward direction (most consistent with Nao's kinematics)
+        theta_r = {angle for angle in theta_r if angle <= 0}
+        if len(theta_r) != 1:
+            raise ValueError("Expected exactly one candidate theta_r")
+        theta_r = next(theta_r.__iter__())
+
+        # Detect gimbal lock:
+        if np.isclose(theta_r, 0) or np.isclose(np.abs(theta_r), np.pi):
+            theta_y = 0
+            position_left_hand_standard, rotation_left_hand_standard = \
+                ForwardKinematics.forward_kinematics_left_elbow(
+                    theta_left_elbow_roll=theta_r,
+                    theta_left_elbow_yaw=theta_y,
+                    position_left_elbow_standard=position_left_elbow_standard,
+                    rotation_left_elbow_standard=rotation_left_elbow_standard,
+                    left_forearm_length=left_forearm_length,
+                )
+            return theta_r, theta_y, position_left_hand_standard, rotation_left_hand_standard
+
+        theta_y0 = [
+            arcsin_safe(-p_hat[0] / np.sin(theta_r)),
+            np.pi - arcsin_safe(-p_hat[0] / np.sin(theta_r)),
+        ]
+        theta_y1 = [
+            arccos_safe(p_hat[2] / np.sin(theta_r)),
+            -arccos_safe(p_hat[2] / np.sin(theta_r)),
+        ]
+        equivalence_matrix = [isclose_angles(a, b) for a in theta_y0 for b in theta_y1]
+        if equivalence_matrix[0] or equivalence_matrix[1]:
+            theta_y = theta_y0[0]
+        elif equivalence_matrix[2] or equivalence_matrix[3]:
+            theta_y = theta_y0[1]
+        else:
+            raise ValueError("Failed to find a yaw")
+        theta_y = normalize_angle(theta_y)
+
+        position_left_hand_standard, rotation_left_hand_standard = \
+            ForwardKinematics.forward_kinematics_left_elbow(
+                theta_left_elbow_roll=theta_r,
+                theta_left_elbow_yaw=theta_y,
+                position_left_elbow_standard=position_left_elbow_standard,
+                rotation_left_elbow_standard=rotation_left_elbow_standard,
+                left_forearm_length=left_forearm_length,
+            )
+        return theta_r, theta_y, position_left_hand_standard, rotation_left_hand_standard
 
     @staticmethod
     def inverse_kinematics(bvh_frames_plus_standard):
@@ -446,6 +510,12 @@ class InverseKinematics:
                 rotation_right_elbow_standard=rotation_right_elbow_standard,
                 position_right_hand_inertial=position_right_hand_inertial,
             )
+        theta_left_elbow_roll, theta_left_elbow_yaw, position_left_hand_standard, rotation_left_hand_standard = \
+            InverseKinematics.inverse_kinematics_left_elbow(
+                position_left_elbow_standard=position_left_elbow_standard,
+                rotation_left_elbow_standard=rotation_left_elbow_standard,
+                position_left_hand_inertial=position_left_hand_inertial,
+            )
 
         return {
             'RShoulderRoll': theta_right_shoulder_roll,
@@ -454,6 +524,8 @@ class InverseKinematics:
             'LShoulderPitch': theta_left_shoulder_pitch,
             'RElbowRoll': theta_right_elbow_roll,
             'RElbowYaw': theta_right_elbow_yaw,
+            'LElbowRoll': theta_left_elbow_roll,
+            'LElbowYaw': theta_left_elbow_yaw,
         }
 
 
@@ -517,6 +589,26 @@ class ForwardKinematics:
         return position_right_hand_standard, rotation_right_hand_standard
 
     @staticmethod
+    def forward_kinematics_left_elbow(
+            theta_left_elbow_roll,
+            theta_left_elbow_yaw,
+            position_left_elbow_standard,
+            rotation_left_elbow_standard,
+            left_forearm_length):
+
+        rotation_left_hand_standard = (
+                rotation_left_elbow_standard *
+                Rotation.from_rotvec(theta_left_elbow_yaw * np.array([0, -1, 0])) *
+                Rotation.from_rotvec(theta_left_elbow_roll * np.array([1, 0, 0]))
+        )
+
+        position_left_hand_standard = \
+            rotation_left_hand_standard.apply(
+                left_forearm_length * np.array([0, 1, 0])) + position_left_elbow_standard
+
+        return position_left_hand_standard, rotation_left_hand_standard
+
+    @staticmethod
     def forward_kinematics(ik, bvh_frames_plus_standard):
         right_arm_length = np.linalg.norm(bvh_frames_plus_standard['RightArm'][0] - bvh_frames_plus_standard['RightForeArm'][0])
         left_arm_length = np.linalg.norm(bvh_frames_plus_standard['LeftArm'][0] - bvh_frames_plus_standard['LeftForeArm'][0])
@@ -544,11 +636,18 @@ class ForwardKinematics:
             position_right_elbow_standard,
             rotation_right_elbow_standard,
             right_forearm_length)
+        position_left_hand_standard, rotation_left_hand_standard = ForwardKinematics.forward_kinematics_left_elbow(
+            ik['LElbowRoll'],
+            ik['LElbowYaw'],
+            position_left_elbow_standard,
+            rotation_left_elbow_standard,
+            left_forearm_length)
 
         return [
             ('FKRightElbow', position_right_elbow_standard, rotation_right_elbow_standard),
             ('FKLeftElbow', position_left_elbow_standard, rotation_left_elbow_standard),
             ('FKRightHand', position_right_hand_standard, rotation_right_hand_standard),
+            ('FKLeftHand', position_left_hand_standard, rotation_left_hand_standard),
         ]
 
 
