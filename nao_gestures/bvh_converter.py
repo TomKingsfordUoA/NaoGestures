@@ -7,7 +7,7 @@ import pandas as pd
 from numpy import pi
 from scipy.spatial.transform import Rotation
 
-from .kinematics import InverseKinematics
+from .nao_kinematics import InverseKinematics
 from pymo.parsers import BVHParser
 from pymo.preprocessing import MocapParameterizer
 
@@ -28,8 +28,8 @@ class NaoBvhConverter:
 
     @staticmethod
     def bvh_to_dataframe_of_nao_gestures(mocap_data):
-        all_frames, index = NaoBvhConverter.get_bvh_frames(mocap_data)
-        all_frames = [NaoBvhConverter.add_standard_frames(frames) for frames in all_frames]
+        all_frames, index = NaoBvhConverter._get_bvh_frames(mocap_data)
+        all_frames = [NaoBvhConverter._add_standard_frames(frames) for frames in all_frames]
         inverse_kinematics = [InverseKinematics.inverse_kinematics(frame) for frame in all_frames]
         return pd.DataFrame(data=inverse_kinematics, index=index)
 
@@ -91,7 +91,7 @@ class NaoBvhConverter:
         return pd.DataFrame(data=dict_of_series)
 
     @staticmethod
-    def get_bvh_frames(mocap_data):
+    def _get_bvh_frames(mocap_data):
         skeleton = mocap_data.skeleton
 
         # Get index:
@@ -138,7 +138,7 @@ class NaoBvhConverter:
         return all_frames, index
 
     @staticmethod
-    def add_standard_frames(bvh_frames):
+    def _add_standard_frames(bvh_frames):
         """
         The goal here is to create some shoulder-attached frames which reference anatomical landmarks. The BVH frames are
         arbitrary and make it difficult to perform inverse kinematics and solve for Nao robot joint rotations. With

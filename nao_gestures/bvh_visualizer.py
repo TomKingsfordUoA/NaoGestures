@@ -5,7 +5,7 @@ from mpl_toolkits.mplot3d import Axes3D  # noqa
 
 from nao_gestures import NaoGesturePlayer
 from nao_gestures.bvh_converter import NaoBvhConverter
-from nao_gestures.kinematics import InverseKinematics, ForwardKinematics
+from nao_gestures.nao_kinematics import InverseKinematics, ForwardKinematics
 
 
 def draw_frame(ax, label, position, rotation, arrow_length=1.0):
@@ -32,8 +32,8 @@ def draw_frame(ax, label, position, rotation, arrow_length=1.0):
 
 def main():
     mocap_data = NaoBvhConverter.read_mocap_data('nao_gestures/demos/examples/rand_5.bvh')
-    all_frames, index = NaoBvhConverter.get_bvh_frames(mocap_data)
-    all_frames = [NaoBvhConverter.add_standard_frames(frames) for frames in all_frames]
+    all_frames, index = NaoBvhConverter._get_bvh_frames(mocap_data)
+    all_frames = [NaoBvhConverter._add_standard_frames(frames) for frames in all_frames]
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     drawable_frames = [
