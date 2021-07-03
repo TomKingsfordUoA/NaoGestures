@@ -1,4 +1,4 @@
-![](example.gif)
+![](nao_gestures/demos/examples/rand_5_sidebyside.mp4)
 
 # Introduction
 
