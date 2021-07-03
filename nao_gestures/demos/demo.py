@@ -2,7 +2,7 @@ from nao_gestures import NaoBvhConverter, NaoGesturePlayer
 
 if __name__ == "__main__":
     # Get a playable dataframe of gestures:
-    mocap_data = NaoBvhConverter.read_mocap_data('nao_gestures/demos/sample.bvh')
+    mocap_data = NaoBvhConverter.read_mocap_data('nao_gestures/demos/examples/rand_21.bvh')
     df_gestures = NaoBvhConverter.bvh_to_dataframe_of_nao_gestures(mocap_data)
 
     # Play gestures:

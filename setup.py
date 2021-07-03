@@ -4,7 +4,7 @@ from distutils.core import setup
 
 setup(
     name='nao-gestures',
-    version='0.1',
+    version='1.0',
     description='Makes it easier to realise gestures on a Nao robot.',
     author='Tom Kingsford',
     author_email='tkin063@aucklanduni.ac.nz',
