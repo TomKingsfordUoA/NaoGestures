@@ -15,16 +15,21 @@ work in progress.
 
 # Requirements
 
-The naoqi Python SQK must be installed (see http://doc.aldebaran.com/2-1/dev/python/install_guide.html#python-install-guide).
+The naoqi Python SQK must be installed (see [naoqi Python SDK Install Guide](http://doc.aldebaran.com/2-1/dev/python/install_guide.html#python-install-guide)).
 
 The naoqi Python SDK should be extracted and its extracted directory added to the `PYTHONPATH` environment variable.
 
 It is assumed the Nao robot is available either in simulation (i.e. as a virtual robot) or as physical hardware. More 
-information can be found at http://doc.aldebaran.com/2-5/index_dev_guide.html.
+information can be found at [Nao Dev Guide](http://doc.aldebaran.com/2-5/index_dev_guide.html).
 
 # Getting Started
 
 A demo can be found in `nao_gestures/demos/demo.py`.
+
+# Known Limitations
+
+1. The Nao robot has more restrictive joint rotations than a human ([Nao Joints](http://doc.aldebaran.com/2-1/family/robots/joints_robot.html)). Where the inverse kinematics requests a joint rotation that exceeds the limits of the Nao robot, the rotation is merely clipped to the limit. This can result in, for example, grossly incorrect hand positions, in order to most faithfully achieve each individual joint rotation. In general, the tradeoff between the accuracy of hand position and joint angles is not clear and should be handled by the upstream module producing gestures.
+2. Only elbow and shoulder joints are considered at this time.
 
 # Credits
 
