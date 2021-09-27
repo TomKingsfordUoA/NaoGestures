@@ -28,7 +28,21 @@ information can be found at [Nao Dev Guide](http://doc.aldebaran.com/2-5/index_d
 
 # Getting Started
 
-A demo can be found in `nao_gestures/demos/demo.py`.
+    # Install dependencies
+    cd /path/to/nao_gestures
+    ./lib/download.sh
+    export PYTHONPATH=$(pwd):$(pwd)/lib/pynaoqi-python2.7-2.8.6.23-linux64-20191127_152327/lib/python2.7/site-packages
+
+    # Create a virtual environment:
+    sudo apt install python3-virtualenv
+    virtualenv --python=python2.7 venv
+    source venv/bin/activate
+
+    # Install:
+    python -m pip install .
+
+    # Run the demo:
+    python nao_gestures/demos/demo.py -h
 
 # Known Limitations
 
