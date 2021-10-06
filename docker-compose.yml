@@ -1,0 +1,46 @@
+version: "3.9"
+
+services:
+  roscore:
+    build: .
+    ports:
+      - "11311:11311"
+    environment:
+      - ROS_MASTER_URI
+    command: roscore
+
+  naoqi-driver:
+    build:
+      context: https://github.com/TomKingsfordUoA/naoqi_driver.git#feature/support-for-simulated-robot
+      dockerfile: Dockerfile
+    environment:
+      - ROS_MASTER_URI
+      - ROS_HOSTNAME=$HOSTNAME_NAOQI_DRIVER
+    # a virtual robot is assumed to be running in Choreographe on the host, and this is forwarded via the Docker network
+    # gateway. Use this command to launch the virtual robot such that it accepts incoming connections outside localhost:
+    #  `"/opt/Softbank Robotics/Choregraphe Suite 2.8/bin/naoqi-bin" -p 9559 -b 0.0.0.0`
+    entrypoint: /bin/bash
+    command: -c "sleep 5; source /catkin_ws/devel/setup.bash; rosrun naoqi_driver naoqi_driver_node --qi-url=tcp://${GATEWAY}:${ROBOT_PORT} --roscore_ip=${ROS_MASTER_HOSTNAME}"
+
+  nao-gestures:
+    build: .
+    environment:
+      - ROS_MASTER_URI
+      - ROS_HOSTNAME=$HOSTNAME_NAO_GESTURES
+    command: bash -c "sleep 5; python nao_gestures/cli.py --use_ros --dest_ip='${ROS_MASTER_HOSTNAME}' --dest_port=11311 --my_ip='${HOSTNAME_NAO_GESTURES}'"
+
+  # provided for debug purposes only...
+  topic-subscriber:
+    build: .
+    environment:
+      - ROS_MASTER_URI
+      - ROS_HOSTNAME=topic-subscriber
+    depends_on:
+      - roscore
+    command: bash -c "sleep 5; rostopic echo /joint_angles"
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: "${GATEWAY}/24"

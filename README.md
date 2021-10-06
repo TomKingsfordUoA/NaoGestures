@@ -38,11 +38,26 @@ information can be found at [Nao Dev Guide](http://doc.aldebaran.com/2-5/index_d
     virtualenv --python=python2.7 venv
     source venv/bin/activate
 
-    # Install:
     python -m pip install .
 
-    # Run the demo:
-    python nao_gestures/demos/demo.py -h
+    nao_gestures -h
+
+# ROS Integration
+
+Use `Dockerfile` and `docker-compose.yml` in support of ROS functionality. Alternatively, you can import this library 
+into another project, if that project can provide the requisite ROS dependencies. Refer to the `Dockerfile` for a
+definition of ROS dependencies.
+
+`docker-compose.yml` is self-contained and spawns its own `roscore`. If this is undesirable, simply remove the 
+`roscore` service.
+
+For a demo of ROS functionality, install [docker-compose](https://docs.docker.com/compose/install/) (v2.0+) and run:
+
+    "/opt/Softbank Robotics/Choregraphe Suite 2.8/bin/naoqi-bin" -p 9559 -b 0.0.0.0
+    docker-compose up --build
+
+Then connect to the virtual robot with [Choreographe](https://developer.softbankrobotics.com/nao6/naoqi-developer-guide/choregraphe-suite/choregraphe-suite-installation-guide)
+for visualisation.
 
 # Known Limitations
 

@@ -3,8 +3,8 @@ import numpy as np
 import pandas as pd
 from mpl_toolkits.mplot3d import Axes3D  # noqa
 
-from nao_gestures import NaoGesturePlayer
 from nao_gestures.bvh_converter import NaoBvhConverter
+from nao_gestures.nao_gesture_player import NaoqiNaoGesturePlayer
 from nao_gestures.nao_kinematics import InverseKinematics, ForwardKinematics
 
 
@@ -90,7 +90,7 @@ def main():
         plt.pause(0.05)
 
     # Play on Nao:
-    player = NaoGesturePlayer(
+    player = NaoqiNaoGesturePlayer(
         robot_ip="127.0.0.1",
         robot_port=9559,
         my_ip="127.0.0.1",
