@@ -1,10 +1,12 @@
 import argparse
 import pickle
+import json
 
 import rospy
 from std_msgs.msg import String
 
 from nao_gestures import NaoBvhConverter
+from nao_gestures.mocap_data_helpers import mocap_data_to_json
 
 
 def main():
@@ -18,7 +20,7 @@ def main():
     pub = rospy.Publisher(args.topic, String)
     rospy.init_node('bvh_publisher', anonymous=True)
     msg = String()
-    msg.data = pickle.dumps(mocap_data)
+    msg.data = json.dumps(mocap_data_to_json(mocap_data))
     pub.publish(msg)
 
 

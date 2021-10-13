@@ -29,6 +29,15 @@ services:
       - ROS_HOSTNAME=$HOSTNAME_NAO_GESTURES
     command: bash -c "sleep 5; python nao_gestures/cli.py --use_ros --dest_ip='${ROS_MASTER_HOSTNAME}' --dest_port=11311 --my_ip='${HOSTNAME_NAO_GESTURES}'"
 
+  # play a sample BVH file:
+  publish-bvh-file:
+    build: .
+    environment:
+      - ROS_MASTER_URI
+    depends_on:
+      - roscore
+    command: bash -c "sleep 10; python nao_gestures/publish_bvh_to_ros.py --bvh_file nao_gestures/demos/examples/rand_21.bvh"
+
   # provided for debug purposes only...
   topic-subscriber:
     build: .

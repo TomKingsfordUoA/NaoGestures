@@ -1,9 +1,14 @@
 #!/bin/env python2.7
-import math
 import os
+import socket
 import sys
 import time
-import socket
+
+import pandas as pd
+import pymo.data
+
+from nao_gestures import NaoBvhConverter
+from nao_gestures.mocap_data_helpers import mocap_data_from_json
 
 
 class NaoGesturePlayer:
@@ -63,10 +68,14 @@ class NaoqiNaoGesturePlayer(NaoGesturePlayer):
 
 
 class RosNaoGesturePlayer(NaoGesturePlayer):
-    def __init__(self, ros_master_uri, my_ip_or_hostname, stream_err=sys.stderr):
+    """
+    ros-related imports are performed at runtime, not import time as rospy isn't a hard requirement
+    rospy is placed on PYTHONPATH by `source /opt/ros/melodic/setup.bash`
+    """
+    def __init__(self, ros_master_uri, my_ip_or_hostname, topic_name='gestures_bvh'):
         NaoGesturePlayer.__init__(self)
         self._ros_master_uri = ros_master_uri
-        self._stream_err = stream_err
+        self._topic_name = topic_name
 
         try:
             socket.inet_aton(my_ip_or_hostname)
@@ -115,15 +124,8 @@ class RosNaoGesturePlayer(NaoGesturePlayer):
 
     @__manage_environment
     def play(self, df_gestures, speed=1.0):
-        # Perform import at runtime, not execute time as rospy isn't a hard requirement
-        # rospy is placed on PYTHONPATH by `source /opt/ros/melodic/setup.bash`
-        # try/except not really necessary, just makes it clear we're very much doing a runtime import
-        try:
-            import rospy
-            from std_msgs.msg import String
-            from naoqi_bridge_msgs.msg import JointAnglesWithSpeed
-        except ImportError as exc:
-            raise exc
+        import rospy
+        from naoqi_bridge_msgs.msg import JointAnglesWithSpeed
 
         if 'ROS_MASTER_URI' not in os.environ:
             raise ValueError('Environment variable ROS_MASTER_URI not set')
@@ -147,7 +149,7 @@ class RosNaoGesturePlayer(NaoGesturePlayer):
             if dt > 0:
                 rospy.sleep(dt)
             else:
-                self._stream_err.write("WARNING! Robot fell behind achieving gestures\n")
+                rospy.logwarn("WARNING! Robot fell behind achieving gestures\n")
 
             # Execute on robot:
             joint_angles_with_speed = JointAnglesWithSpeed()
@@ -157,3 +159,28 @@ class RosNaoGesturePlayer(NaoGesturePlayer):
             joint_angles_with_speed.speed = 1.0
             rospy.loginfo(joint_angles_with_speed)
             pub.publish(joint_angles_with_speed)
+
+    def _mocap_callback(self, data):
+        """
+        pymo's MocapData is pickled and published to the topic as a String, rather than using for instance https://wiki.ros.org/bvh_broadcaster
+        because that library publishes tf transforms, and this is undesirable because MocapData is just an intermediate format
+        used by co-speech gesture models and is based on arbitrary human kinematics rather than physically-meaningful robot
+        kinematics.
+        """
+        import rospy
+
+        rospy.loginfo("Received mocap data")
+        sys.stdout.flush()
+
+        mocap_data = mocap_data_from_json(data.data)
+
+        df_gestures = NaoBvhConverter.bvh_to_dataframe_of_nao_gestures(mocap_data)
+        self.play(df_gestures)
+
+    def run(self):
+        import rospy
+        from std_msgs.msg import String
+
+        rospy.init_node('nao-gestures', anonymous=True)
+        rospy.Subscriber(self._topic_name, String, self._mocap_callback)
+        rospy.spin()

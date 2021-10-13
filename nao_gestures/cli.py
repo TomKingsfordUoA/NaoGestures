@@ -14,24 +14,25 @@ def main():
     parser.add_argument('--use_ros', action='store_true')
     args = parser.parse_args()
 
-    # Get a playable dataframe of gestures:
-    mocap_data = NaoBvhConverter.read_mocap_data(args.bvh_file)
-    df_gestures = NaoBvhConverter.bvh_to_dataframe_of_nao_gestures(mocap_data)
-
     # Play gestures:
     if args.use_ros:
         player = RosNaoGesturePlayer(
             ros_master_uri='http://' + args.dest_ip + ':' + str(args.dest_port),
             my_ip_or_hostname=args.my_ip,
         )
+        player.run()
     else:
+        # Get a playable dataframe of gestures:
+        mocap_data = NaoBvhConverter.read_mocap_data(args.bvh_file)
+        df_gestures = NaoBvhConverter.bvh_to_dataframe_of_nao_gestures(mocap_data)
+
         player = NaoqiNaoGesturePlayer(
             robot_ip=args.dest_ip,
             robot_port=args.dest_port,
             my_ip=args.my_ip,
             my_port=args.my_port,
         )
-    player.play(df_gestures, speed=1.0)
+        player.play(df_gestures, speed=1.0)
 
 
 if __name__ == "__main__":

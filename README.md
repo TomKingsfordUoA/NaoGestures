@@ -51,13 +51,12 @@ definition of ROS dependencies.
 `docker-compose.yml` is self-contained and spawns its own `roscore`. If this is undesirable, simply remove the 
 `roscore` service.
 
-For a demo of ROS functionality, install [docker-compose](https://docs.docker.com/compose/install/) (v2.0+) and run:
-
-    "/opt/Softbank Robotics/Choregraphe Suite 2.8/bin/naoqi-bin" -p 9559 -b 0.0.0.0
-    docker-compose up --build
-
-Then connect to the virtual robot with [Choreographe](https://developer.softbankrobotics.com/nao6/naoqi-developer-guide/choregraphe-suite/choregraphe-suite-installation-guide)
+For a demo of ROS functionality:
+1. Install [docker-compose](https://docs.docker.com/compose/install/) (v2.0+)
+2. Run a virtual robot: `"/opt/Softbank Robotics/Choregraphe Suite 2.8/bin/naoqi-bin" -p 9559 -b 0.0.0.0`
+3. Connect to the virtual robot with [Choreographe](https://developer.softbankrobotics.com/nao6/naoqi-developer-guide/choregraphe-suite/choregraphe-suite-installation-guide)
 for visualisation.
+4. `docker-compose up --build`
 
 # Known Limitations
 
